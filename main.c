@@ -7,8 +7,8 @@
 
 
 int main(void){
-
-  instruction_pool = (BYTE_LENGHT*)malloc(sizeof(BYTE_LENGHT)*3*pool_size);
+ 
+  // put 68 and add 1 until it reach 420
   vm_programm prg = {
     .programm_lenght = 9,
     .inst_array = {
@@ -23,9 +23,32 @@ int main(void){
       "HLT()"
     }
   };
+
+  // fibonacci sequence
+  vm_programm prg2 = {
+    .programm_lenght = 9,
+    .inst_array = {
+      "PUT(1)",
+      "PUT(1)",
+      "ADC#(0,1)",
+      "SWP(0,1)",
+      "PRT(1)", 
+      "CMP(1, 46368)",
+      "JEQ(8)",
+      "JMP(2)",
+      "HLT()"
+    }
+  };
+  jaat_start();   // start point
+  
   jaat_load_programm(&prg);
   parse_instruction();
   jaat_loop();
+  jaat_load_programm(&prg2);
+  parse_instruction();
+  jaat_loop();
+ 
+  jaat_free();    // end point 
   return 0;
 }
 

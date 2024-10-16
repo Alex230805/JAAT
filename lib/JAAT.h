@@ -21,6 +21,7 @@
 #define DEBUG false
 #define MACHINE_STATE false
 #define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
+#define MAX_PROGRAMM_SIZE 4096
 
 // instruction enum for parsing and instruction check
 
@@ -29,13 +30,17 @@ typedef enum{
   PUT,
   POP,
   ADC,
+  ADC_ADR,
   SBC,
+  SBC_ADR,
   JMP,
   JNZ,
   JPO,
   CMP,
   JEQ,
   NXT,
+  PRV,
+  SWP,
   PRT
 }vm_inst;
 
@@ -57,7 +62,7 @@ typedef struct{
 
 typedef struct{
   int programm_lenght;
-  char inst_array[120][WORD_LEN];
+  char inst_array[MAX_PROGRAMM_SIZE][WORD_LEN];
 }vm_programm;
 
 
@@ -66,20 +71,24 @@ typedef struct{
 void jaat_loop();
 void jaat_load(vm_inst instruction, int arg_0,int arg_1);
 void jaat_exec();
+void jaat_free();
+void jaat_start();
 void jaat_load_programm(vm_programm *new_prg);
 void parse_instruction();
 
 void jaat_hlt(void);
 void jaat_put(int arg_0);
 void jaat_pop(void);
-void jaat_adc(int arg_0, int arg_1);
-void jaat_sbc(int arg_0, int arg_1);
+void jaat_adc(int arg_0, int arg_1, bool address_op);
+void jaat_sbc(int arg_0, int arg_1, bool address_op);
 void jaat_jmp(int arg_0);
 void jaat_jnz(int arg_0);
 void jaat_jpo(int arg_0);
 void jaat_cmp(int arg_0,int arg_1);
 void jaat_jeq(int arg_0);
 void jaat_nxt();
+void jaat_prv();
+void jaat_swp(int arg_0, int arg_1);
 void jaat_prt();
 
 // tag definition
@@ -87,15 +96,17 @@ void jaat_prt();
 #define HLT()             jaat_hlt();            // halt function: halt the execution
 #define PUT(arg_0)        jaat_put(arg_0);        // put function:  put arg_0 data into stack
 #define POP()             jaat_pop();             // pop function:  pop the stack content from stack and load the accumulator
-#define ADC(arg_0,arg_1)  jaat_adc(arg_0,arg_1);  // adc function:  sum accumulator content with arg_1 content and put into arg_0 address
-#define SBC(arg_0,arg_1)  jaat_sbc(arg_0,arg_1);  // sbc function:  sub accumulator content with arg_1 content and put into arg_0 address
+#define ADC(arg_0,arg_1,flag)  jaat_adc(arg_0,arg_1,flag);  // adc function:  sum accumulator content with arg_1 content and put into arg_0 address
+#define SBC(arg_0,arg_1,flag)  jaat_sbc(arg_0,arg_1,flag);  // sbc function:  sub accumulator content with arg_1 content and put into arg_0 address
 #define JMP(arg_0)        jaat_jmp(arg_0);        // jmp function:  jump to a specific point in programm
 #define JNZ(arg_0)        jaat_jnz(arg_0);        // jnz funciont:  jump if the alu result is not 0
 #define JEQ(arg_0)        jaat_jeq(arg_0);        // jeq funciont:  jump if zero is set
-#define CMP(arg_0, arg_1) jaat_cmp(arg_0, arg_1); // cmp function:  compare stack location with arg_1
+#define CMP(arg_0, arg_1) jaat_cmp(arg_0, arg_1); // cmp function:  compare arg_0 stack location with arg_1
 #define JPO(arg_0)        jaat_jpo(arg_0);        // jpo function:  jump if the alu overflow frlag is set
-#define PRT()             jaat_prt();             // prt print function: print content inside the current stack pointer
+#define PRT(arg_0)        jaat_prt(arg_0);        // prt print function: print content inside the provided location
 #define NXT()             jaat_nxt();             // nxt function: increment the stack pointer by one
+#define PRV()             jaat_prv();             // prv function: decrement the stack pointer by one 
+#define SWP(arg_0,arg_1)  jaat_swp(arg_0,arg_1);
 
 int pool_size = 1024;
 vm JAAT = {0};
@@ -135,12 +146,18 @@ void parse_instruction(){
       type = JMP;
     }else if(strcmp(inst, "PRT") == 0){
       type = PRT;
+    }else if(strcmp(inst, "JNZ") == 0){
+      type = JNZ;
     }else if(strcmp(inst, "CMP") == 0){
       type = CMP;
     }else if(strcmp(inst, "JEQ") == 0){
       type = JEQ;
     }else if(strcmp(inst, "NXT") == 0){
       type = NXT;
+    }else if(strcmp(inst, "PRV") == 0){
+      type = PRV;
+    }else if(strcmp(inst, "SWP") == 0){
+      type = SWP;
     }else{
       fprintf(stderr, "ERROR: no such instruction to parse\n");
       exit(3);
@@ -154,7 +171,18 @@ void parse_instruction(){
         end = true;
       }
     }
-    
+    if(prg->inst_array[i][start_point-2] == 35){
+      switch(type){
+        case ADC:
+          type = ADC_ADR;
+          break;
+        case SBC:
+          type = SBC_ADR;
+          break;
+        default:
+          break;
+      } 
+    }
     end = false;
     int ptr=0;
     bool first = false;
@@ -224,8 +252,7 @@ void jaat_loop(){
     printf("Zero overflow: %d\n", JAAT.overflow);
     printf("Zero negative: %d\n", JAAT.negative);
   }
-  free(instruction_pool);
-  instruction_pool = 0; 
+  
 }
 
 void jaat_load(vm_inst instruction, int arg_0,int arg_1){
@@ -234,7 +261,14 @@ void jaat_load(vm_inst instruction, int arg_0,int arg_1){
   JAAT.arg_1 = arg_1;
 }
 
+void jaat_start(){
+  instruction_pool = (BYTE_LENGHT*)malloc(sizeof(BYTE_LENGHT)*3*pool_size);
+}
 
+void jaat_free(){
+  free(instruction_pool);
+  instruction_pool = 0; 
+}
 
 void jaat_exec(){
   switch(JAAT.current_instruction){
@@ -248,10 +282,16 @@ void jaat_exec(){
         POP();
         break;
     case ADC:
-        ADC(JAAT.arg_0,JAAT.arg_1);
+        ADC(JAAT.arg_0,JAAT.arg_1,false);
         break;
     case SBC:
-        SBC(JAAT.arg_0,JAAT.arg_1);
+        SBC(JAAT.arg_0,JAAT.arg_1, false);
+        break;
+    case ADC_ADR:
+        ADC(JAAT.arg_0,JAAT.arg_1, true);
+        break;
+    case SBC_ADR:
+        SBC(JAAT.arg_0,JAAT.arg_1, true);
         break;
     case JMP:
         JMP(JAAT.arg_0);
@@ -263,7 +303,7 @@ void jaat_exec(){
         JPO(JAAT.arg_0);
         break;
     case PRT:
-        PRT();
+        PRT(JAAT.arg_0);
         break;
     case JEQ:
         JEQ(JAAT.arg_0);
@@ -274,6 +314,12 @@ void jaat_exec(){
     case NXT:
         NXT();
         break;
+    case SWP:
+        SWP(JAAT.arg_0, JAAT.arg_1);
+        break;
+    case PRV:
+        PRV();
+        break;
     default:
       NO_IMPLEMENTATION();
       fwrite("No such instruction please check your code!", 43,1, stderr);
@@ -282,6 +328,13 @@ void jaat_exec(){
   return;
 }
 void jaat_load_programm(vm_programm *new_prg){
+  JAAT.programm_counter = 0;
+  JAAT.negative = false;
+  JAAT.overflow = false;
+  JAAT.zero = false;
+  JAAT.halt = false;
+  JAAT.accumulator = 0;
+  JAAT.current_pointer = 0;
   prg = new_prg;
 }
 
@@ -311,11 +364,16 @@ void jaat_pop(void){
   } 
 }
 
-void jaat_adc(int arg_0, int arg_1){
+void jaat_adc(int arg_0, int arg_1, bool address_op){
   if(DEBUG) printf("ADC\n");
   STACK_TYPES res = 0;
   int cache;
-  cache = JAAT.accumulator + arg_1;
+  if(address_op){
+    cache = JAAT.stack[arg_0] + JAAT.stack[arg_1];
+  }else{
+    cache = JAAT.accumulator + arg_1;
+  }
+
   if(cache > sizeof(STACK_TYPES)*255 ) {
     JAAT.overflow = true;
   }
@@ -324,11 +382,16 @@ void jaat_adc(int arg_0, int arg_1){
   JAAT.stack[arg_0] = res;
 }
 
-void jaat_sbc(int arg_0, int arg_1){
+void jaat_sbc(int arg_0, int arg_1, bool address_op){
   if(DEBUG) printf("SBC\n");
   STACK_TYPES res = 0;
   int cache;
-  cache = JAAT.stack[arg_0] - JAAT.accumulator;
+  if(address_op){
+    cache = JAAT.stack[arg_0] - JAAT.stack[arg_1];
+  }else{
+    cache = JAAT.accumulator - JAAT.stack[arg_0];
+  }
+
   if(sizeof(cache) > sizeof(STACK_TYPES)){
     JAAT.overflow = true;
     res = (STACK_TYPES)cache;
@@ -373,26 +436,28 @@ void jaat_jpo(int arg_0){
 }
 
 
-void jaat_prt(){
+void jaat_prt(int arg_0){
   if(DEBUG) printf("PRT\n");
-  fprintf(stdout, "%d\n", JAAT.stack[JAAT.current_pointer]);
+  if(arg_0 >= 0 && arg_0 < STACK_LENGHT) fprintf(stdout, "%d\n", JAAT.stack[arg_0]);
   return;
 }
 
 
 void jaat_cmp(int arg_0,int arg_1){
   if(DEBUG) printf("CMP\n");
-  int a = JAAT.stack[JAAT.current_pointer];
-  a -= arg_1;
-  if(a == 0){
-    JAAT.zero = true;
-  }else{
-    JAAT.zero = false;
-  }
-  if(a < 0){
-    JAAT.negative = true;
-  }else{
-    JAAT.negative = false;
+  if(arg_0 >= 0 && arg_0 < STACK_LENGHT){
+    int a = JAAT.stack[arg_0];
+    a -= arg_1;
+    if(a == 0){
+      JAAT.zero = true;
+    }else{
+      JAAT.zero = false;
+    }
+    if(a < 0){
+      JAAT.negative = true;
+    }else{
+      JAAT.negative = false;
+    }
   }
 }
 
@@ -413,6 +478,25 @@ void jaat_nxt(){
   if(JAAT.current_pointer > STACK_LENGHT){
     printf("WARNING: stack overflow using manual increment\n");
     JAAT.current_pointer = 0;
+  }
+}
+
+void jaat_prv(){
+  if(DEBUG) printf("PRV\n");
+  JAAT.current_pointer -=1;
+  if(JAAT.current_pointer < 0){
+    printf("WARNING: stack underflow using manual decrement\n");
+    JAAT.current_pointer  = STACK_LENGHT;
+  }
+}
+
+void jaat_swp(int arg_0, int arg_1){
+  if(DEBUG) printf("MOV\n");
+  if((arg_0 >= 0 && arg_0 < STACK_LENGHT) && (arg_1 >= 0 && arg_1 < STACK_LENGHT)){
+    STACK_TYPES data = JAAT.stack[arg_0];
+    STACK_TYPES data_2 = JAAT.stack[arg_1];
+    JAAT.stack[arg_0] = data_2;
+    JAAT.stack[arg_1] = data;
   }
 }
 
