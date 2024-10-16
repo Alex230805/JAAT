@@ -11,11 +11,12 @@
 #define u32t uint32_t
 #define u64t uint64_t
 
-#define STACK_TYPES u8t
+#define STACK_TYPES u16t
 #define STACK_LENGHT 32
-#define BYTE_LENGHT u8t
+#define BYTE_LENGHT u16t
 #define WORD_LEN 16
-#define DEBUG true
+#define DEBUG false
+#define MACHINE_STATE false
 #define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
 
 // instruction enum for parsing and instruction check
@@ -27,6 +28,12 @@ typedef enum{
   ADC,
   SBC,
   JMP,
+  JNZ,
+  JPO,
+  CMP,
+  JEQ,
+  NXT,
+  PRT
 }vm_inst;
 
 // JAAT vm
@@ -41,8 +48,48 @@ typedef struct{
   int arg_1;
   bool negative;
   bool overflow;
+  bool zero;
   bool halt;
 }vm;
+
+
+// main functions
+
+void jaat_loop();
+void jaat_load(vm_inst instruction, int arg_0,int arg_1);
+void jaat_exec();
+void parse_instruction();
+
+void jaat_hlt(void);
+void jaat_put(int arg_0);
+void jaat_pop(void);
+void jaat_adc(int arg_0, int arg_1);
+void jaat_sbc(int arg_0, int arg_1);
+void jaat_jmp(int arg_0);
+void jaat_jnz(int arg_0);
+void jaat_jpo(int arg_0);
+void jaat_cmp(int arg_0,int arg_1);
+void jaat_jeq(int arg_0);
+void jaat_nxt();
+void jaat_prt();
+
+// tag definition
+
+#define HLT()             jaat_hlt();            // halt function: halt the execution
+#define PUT(arg_0)        jaat_put(arg_0);        // put function:  put arg_0 data into stack
+#define POP()             jaat_pop();             // pop function:  pop the stack content from stack and load the accumulator
+#define ADC(arg_0,arg_1)  jaat_adc(arg_0,arg_1);  // adc function:  sum accumulator content with arg_1 content and put into arg_0 address
+#define SBC(arg_0,arg_1)  jaat_sbc(arg_0,arg_1);  // sbc function:  sub accumulator content with arg_1 content and put into arg_0 address
+#define JMP(arg_0)        jaat_jmp(arg_0);        // jmp function:  jump to a specific point in programm
+#define JNZ(arg_0)        jaat_jnz(arg_0);        // jnz funciont:  jump if the alu result is not 0
+#define JEQ(arg_0)        jaat_jeq(arg_0);        // jeq funciont:  jump if zero is set
+#define CMP(arg_0, arg_1) jaat_cmp(arg_0, arg_1); // cmp function:  compare stack location with arg_1
+#define JPO(arg_0)        jaat_jpo(arg_0);        // jpo function:  jump if the alu overflow frlag is set
+#define PRT()             jaat_prt();             // prt print function: print content inside the current stack pointer
+#define NXT()             jaat_nxt();             // nxt function: increment the stack pointer by one
+
+int pool_size = 1024;
+vm JAAT = {0};
 
 // programm file 
 
@@ -50,23 +97,36 @@ BYTE_LENGHT* instruction_pool;
 
 // programm buffer
 
-int programm_lenght = 6;
+int programm_lenght = 0;
+
 char inst_array[][WORD_LEN] = {
-  "JMP(0)",
-  "PUT(0,0)",
-  "ADC(0,34)",
-  "POP(0)",
-  "PUT(1)",
-  "HLT()"
+
 };
 
-int pool_size = 20;
-vm JAAT = {0};
+/*  SUM 1 to 69 until it reach 420
+char inst_array[][WORD_LEN] = {
+  "PUT(69)",
+  "POP()",
+  "ADC(0,1)",
+  "CMP(0,420)",
+  "JEQ(7)",
+  "NXT()",
+  "JMP(1)",
+  "PRT()",
+  "HLT()"
+};
+*/
 
-void jaat_loop();
-void jaat_load(vm_inst instruction, int arg_0,int arg_1);
-void jaat_exec();
-void parse_instruction();
+int main(void){
+
+
+  instruction_pool = (BYTE_LENGHT*)malloc(sizeof(BYTE_LENGHT)*3*pool_size);
+  parse_instruction();
+  jaat_loop();
+  free(instruction_pool);
+  return 0;
+}
+
 
 void parse_instruction(){
   vm_inst type;
@@ -90,7 +150,15 @@ void parse_instruction(){
       type = SBC;
     }else if(strcmp(inst,"JMP") == 0){
       type = JMP;
-    } else{
+    }else if(strcmp(inst, "PRT") == 0){
+      type = PRT;
+    }else if(strcmp(inst, "CMP") == 0){
+      type = CMP;
+    }else if(strcmp(inst, "JEQ") == 0){
+      type = JEQ;
+    }else if(strcmp(inst, "NXT") == 0){
+      type = NXT;
+    }else{
       fprintf(stderr, "ERROR: no such instruction to parse\n");
       exit(3);
     }
@@ -157,18 +225,21 @@ void jaat_loop(){
       int arg_1 = (int) instruction_pool[JAAT.programm_counter+2];
       jaat_load(inst,arg_0, arg_1);
       jaat_exec();
-
-      if(JAAT.programm_counter += 3 > sizeof(BYTE_LENGHT)*3*pool_size){
+      JAAT.programm_counter += 3;
+      if(JAAT.programm_counter > programm_lenght*3){
         JAAT.programm_counter = 0;
-      }else{
-        JAAT.programm_counter += 3;
       }
 
     } else {
       fprintf(stderr, "Stack overflow\n");
       exit(2);
     }
-    
+  }
+  if(MACHINE_STATE){
+    printf("Machine state:\n");
+    printf("Zero flag: %d\n", JAAT.zero);
+    printf("Zero overflow: %d\n", JAAT.overflow);
+    printf("Zero negative: %d\n", JAAT.negative);
   }
 }
 
@@ -178,29 +249,181 @@ void jaat_load(vm_inst instruction, int arg_0,int arg_1){
   JAAT.arg_1 = arg_1;
 }
 
+
+
 void jaat_exec(){
   switch(JAAT.current_instruction){
     case HLT:
+        HLT();   
+        break;
     case PUT:
+        PUT(JAAT.arg_0);
+        break;
     case POP:
+        POP();
+        break;
     case ADC:
+        ADC(JAAT.arg_0,JAAT.arg_1);
+        break;
     case SBC:
+        SBC(JAAT.arg_0,JAAT.arg_1);
+        break;
     case JMP:
-          NO_IMPLEMENTATION();
-          break;
+        JMP(JAAT.arg_0);
+        break;
+    case JNZ:
+        JNZ(JAAT.arg_0);
+        break;
+    case JPO:
+        JPO(JAAT.arg_0);
+        break;
+    case PRT:
+        PRT();
+        break;
+    case JEQ:
+        JEQ(JAAT.arg_0);
+        break;
+    case CMP:
+        CMP(JAAT.arg_0,JAAT.arg_1);
+        break;
+    case NXT:
+        NXT();
+        break;
     default:
+      NO_IMPLEMENTATION();
       fwrite("No such instruction please check your code!", 43,1, stderr);
       exit(1);
   }
   return;
 }
 
-int main(void){
+void jaat_hlt(void){
+  if(DEBUG) printf("HLT\n");
+  JAAT.halt = true;
+}
+
+void jaat_put(int arg_0){
+  if(DEBUG) printf("PUT\n");
+  JAAT.stack[JAAT.current_pointer] = arg_0;
+  JAAT.current_pointer += 1;
+
+  if(JAAT.current_pointer > STACK_LENGHT){
+    fprintf(stdout, "WARNING: stack overflow reached, but execution is not halted\n");
+    JAAT.current_pointer += 1;
+  }
+}
+
+void jaat_pop(void){ 
+  if(DEBUG) printf("POP\n");
+  JAAT.current_pointer -= 1;
+  JAAT.accumulator = JAAT.stack[JAAT.current_pointer];
+  if(JAAT.current_pointer < 0){
+    fprintf(stdout, "WARNING: stack underflow reached, but execution is not halted\n");
+    JAAT.current_pointer = 0;
+  } 
+}
+
+void jaat_adc(int arg_0, int arg_1){
+  if(DEBUG) printf("ADC\n");
+  STACK_TYPES res = 0;
+  int cache;
+  cache = JAAT.accumulator + arg_1;
+  if(cache > sizeof(STACK_TYPES)*255 ) {
+    JAAT.overflow = true;
+  }
+  if(res == 0) JAAT.zero = true;
+  res = (STACK_TYPES)cache;
+  JAAT.stack[arg_0] = res;
+}
+
+void jaat_sbc(int arg_0, int arg_1){
+  if(DEBUG) printf("SBC\n");
+  STACK_TYPES res = 0;
+  int cache;
+  cache = JAAT.stack[arg_0] - JAAT.accumulator;
+  if(sizeof(cache) > sizeof(STACK_TYPES)){
+    JAAT.overflow = true;
+    res = (STACK_TYPES)cache;
+  }
+  if(res == 0) JAAT.zero = true;
+  JAAT.stack[arg_0] = res;
+}
+
+void jaat_jmp(int arg_0){
+  if(DEBUG) printf("JMP\n");
+  if(arg_0 > programm_lenght || arg_0 < 0){
+    JAAT.halt = true;
+    fprintf(stderr, "Programm counter is try to read out of programm lenght");
+    return;
+  }
+  JAAT.programm_counter = (arg_0*3) - 3;
+}
+
+void jaat_jnz(int arg_0){
+  if(DEBUG) printf("JNZ\n");
+  if(JAAT.zero == false){
+    if(arg_0 > programm_lenght || arg_0 < 0){
+      JAAT.halt = true;
+      fprintf(stderr, "Programm counter is try to read out of programm lenght");
+    }
+    JAAT.programm_counter = (arg_0*3) - 3;
+  }
+    return;
+}
 
 
-  instruction_pool = (BYTE_LENGHT*)malloc(sizeof(BYTE_LENGHT)*3*pool_size);
-  parse_instruction();
+void jaat_jpo(int arg_0){
+  if(DEBUG) printf("JPO\n");
+  if(JAAT.overflow == true){
+    if(arg_0 > programm_lenght || arg_0 < 0){
+      JAAT.halt = true;
+      fprintf(stderr, "Programm counter is try to read out of programm lenght");
+    }
+    JAAT.programm_counter = (arg_0*3) - 3;
+  }
+  return;
+}
 
-  free(instruction_pool);
-  return 0;
+
+void jaat_prt(){
+  if(DEBUG) printf("PRT\n");
+  fprintf(stdout, "%d\n", JAAT.stack[JAAT.current_pointer]);
+  return;
+}
+
+
+void jaat_cmp(int arg_0,int arg_1){
+  if(DEBUG) printf("CMP\n");
+  int a = JAAT.stack[JAAT.current_pointer];
+  a -= arg_1;
+  if(a == 0){
+    JAAT.zero = true;
+  }else{
+    JAAT.zero = false;
+  }
+  if(a < 0){
+    JAAT.negative = true;
+  }else{
+    JAAT.negative = false;
+  }
+}
+
+void jaat_jeq(int arg_0){
+  if(DEBUG) printf("JEQ\n");
+  if(JAAT.zero == true){
+    if(arg_0 > programm_lenght || arg_0 < 0){
+      JAAT.halt = true;
+      fprintf(stderr, "Programm counter is try to read out of programm lenght");
+    }
+    JAAT.programm_counter = (arg_0*3)-3;
+  }
+}
+
+void jaat_nxt(){
+  if(DEBUG) printf("NXT\n");
+  JAAT.current_pointer += 1;
+  if(JAAT.current_pointer > STACK_LENGHT){
+    printf("WARNING: stack overflow using manual increment\n");
+    JAAT.current_pointer = 0;
+  }
 }
