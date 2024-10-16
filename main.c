@@ -26,7 +26,6 @@ int main(void){
   jaat_load_programm(&prg);
   parse_instruction();
   jaat_loop();
-  free(instruction_pool);
   return 0;
 }
 

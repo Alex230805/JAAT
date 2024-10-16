@@ -224,6 +224,8 @@ void jaat_loop(){
     printf("Zero overflow: %d\n", JAAT.overflow);
     printf("Zero negative: %d\n", JAAT.negative);
   }
+  free(instruction_pool);
+  instruction_pool = 0; 
 }
 
 void jaat_load(vm_inst instruction, int arg_0,int arg_1){
