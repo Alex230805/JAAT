@@ -100,13 +100,13 @@ void jaat_prt();
 #define SBC(arg_0,arg_1,flag)  jaat_sbc(arg_0,arg_1,flag);  // sbc function:  sub accumulator content with arg_1 content and put into arg_0 address, if flag is enable then it behave the same as ADC
 #define JMP(arg_0)             jaat_jmp(arg_0);        // jmp function:  jump to a specific point in programm
 #define JNZ(arg_0)             jaat_jnz(arg_0);        // jnz funciont:  jump if the alu result is not 0
-#define JEQ(arg_0)            jaat_jeq(arg_0);        // jeq funciont:  jump if zero is set
-#define CMP(arg_0, arg_1)     jaat_cmp(arg_0, arg_1); // cmp function:  compare arg_0 stack location with arg_1
-#define JPO(arg_0)            jaat_jpo(arg_0);        // jpo function:  jump if the alu overflow frlag is set
-#define PRT(arg_0)            jaat_prt(arg_0);        // prt print function: print content inside the provided location
-#define NXT()                 jaat_nxt();             // nxt function: increment the stack pointer by one
-#define PRV()                 jaat_prv();             // prv function: decrement the stack pointer by one 
-#define SWP(arg_0,arg_1)      jaat_swp(arg_0,arg_1);
+#define JEQ(arg_0)             jaat_jeq(arg_0);        // jeq funciont:  jump if zero is set
+#define CMP(arg_0, arg_1)      jaat_cmp(arg_0, arg_1); // cmp function:  compare arg_0 stack location with arg_1
+#define JPO(arg_0)             jaat_jpo(arg_0);        // jpo function:  jump if the alu overflow frlag is set
+#define PRT(arg_0)             jaat_prt(arg_0);        // prt print function: print content inside the provided location
+#define NXT()                  jaat_nxt();             // nxt function: increment the stack pointer by one
+#define PRV()                  jaat_prv();             // prv function: decrement the stack pointer by one 
+#define SWP(arg_0,arg_1)       jaat_swp(arg_0,arg_1);
 
 int pool_size = 1024;
 vm JAAT = {0};
