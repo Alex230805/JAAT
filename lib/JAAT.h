@@ -15,14 +15,14 @@
 #define u64t uint64_t
 
 #define STACK_TYPES u16t
-#define STACK_LENGHT 32
+#define STACK_LENGHT 1024
 #define BYTE_LENGHT u16t
-#define WORD_LEN 255
+#define WORD_LEN 512
 #define DEBUG false
 #define MACHINE_STATE false
 #define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
 #define MAX_PROGRAMM_SIZE 4096
-#define STR_LEN 255
+#define STR_LEN 512
 
 // instruction enum for parsing and instruction check
 
@@ -57,6 +57,7 @@ typedef struct{
   vm_inst current_instruction;
   STACK_TYPES accumulator;
   char*string_ptr;
+  int string_stracker;
   int arg_0;
   int arg_1;
   bool negative;
@@ -114,17 +115,19 @@ void jaat_dec(int arg_0);
 #define PRT(arg_0)             jaat_prt(arg_0);        // prt print function: print content inside the provided location
 #define NXT()                  jaat_nxt();             // nxt function: increment the stack pointer by one
 #define PRV()                  jaat_prv();             // prv function: decrement the stack pointer by one 
-#define SWP(arg_0,arg_1)       jaat_swp(arg_0,arg_1);
-#define INC(arg_0)             jaat_inc(arg_0);
-#define DEC(arg_0)             jaat_dec(arg_0);
-#define PRT_STRING(arg_0)             jaat_prt_string(arg_0);
+#define SWP(arg_0,arg_1)       jaat_swp(arg_0,arg_1);  // swp function: swap the content of two element 
+#define INC(arg_0)             jaat_inc(arg_0);        // inc function: increment data in position arg_0
+#define DEC(arg_0)             jaat_dec(arg_0);        // dec function: decrement data in position arg_0
+#define PRT_STRING(arg_0)      jaat_prt_string(arg_0); // prt_string:   string variation of prt
 
 int pool_size = 1024;
 vm JAAT = {0};
 
+
 // programm file 
 
 BYTE_LENGHT* instruction_pool;
+char** string_buffer;
 
 vm_programm* prg;
 
@@ -139,6 +142,8 @@ void parse_instruction(){
   int arg_0, arg_1;
   char inst[3]; 
   bool string;
+  int buffer_index = 0;
+  bool halt_exist = false;
   for(int i=0;i< prg->programm_lenght;i++){
     string = false;
     arg_0 = 0;
@@ -147,6 +152,7 @@ void parse_instruction(){
 
     if(strcmp(inst,"HLT") == 0){
       type = HLT;
+      halt_exist = true;
     }else if(strcmp(inst,"PUT") == 0){
       type = PUT;
     }else if(strcmp(inst,"POP") == 0){
@@ -211,9 +217,9 @@ void parse_instruction(){
       string = true;
     }
     end = false;
-    int ptr=0, ptr_string = 0;
+    int ptr=0;
     bool first = false;
-    char* str = (char*)malloc(sizeof(char)*STR_LEN);
+    char* str = 0;
     while(!end && ptr < WORD_LEN-start_point && string == false){
       if(prg->inst_array[i][start_point+ptr] == 41){
         end = true;
@@ -228,19 +234,21 @@ void parse_instruction(){
       }
       ptr+=1;
     }
-
-    while(!end && ptr < WORD_LEN-start_point && ptr_string < STR_LEN){
+    int current_str_len = 0;
+    while(!end && current_str_len < STR_LEN){
       if(prg->inst_array[i][start_point+ptr] == 41){
         end = true;
-      }else if(prg->inst_array[i][start_point+ptr] != 44 && (prg->inst_array[i][start_point+ptr] != 34 || prg->inst_array[i][start_point+ptr] != 39)){
-        str[ptr_string] = prg->inst_array[i][start_point+ptr];
+      }else {
+        current_str_len += 1;
       }
-      ptr+=1;
-      ptr_string+=1;
+      ptr += 1;
     }
     if(string){
-      str[ptr_string] = 0;
-      JAAT.string_ptr = str;
+      str = (char*)malloc(sizeof(char)*current_str_len-2);
+      memcpy(str, &prg->inst_array[i][start_point+1],sizeof(char)*current_str_len-2);
+      str[current_str_len-2] = 0;
+      string_buffer[buffer_index] = str;
+      buffer_index+=1;
     }
     instruction_pool[pool_index] = type;
     instruction_pool[pool_index+1] = arg_0;
@@ -261,6 +269,10 @@ void parse_instruction(){
       exit(4);
     }
   } 
+  if(!halt_exist){
+    fprintf(stderr,"ERROR: no halt function found, the programm may fail or may act in a non predetermined way\n");
+    exit(6);
+  }
 }
 
 void jaat_loop(){
@@ -277,37 +289,43 @@ void jaat_loop(){
       jaat_load(inst,arg_0, arg_1);
       jaat_exec();
       JAAT.programm_counter += 3;
+      JAAT.string_stracker += 1;
       if(JAAT.programm_counter > prg->programm_lenght*3){
         JAAT.programm_counter = 0;
       }
-
     } else {
       fprintf(stderr, "Stack overflow\n");
       exit(2);
     }
+
   }
   if(MACHINE_STATE){
     printf("Machine state:\n");
     printf("Zero flag: %d\n", JAAT.zero);
     printf("Zero overflow: %d\n", JAAT.overflow);
     printf("Zero negative: %d\n", JAAT.negative);
-  }
-  
+  } 
 }
 
 void jaat_load(vm_inst instruction, int arg_0,int arg_1){
   JAAT.current_instruction = instruction;
   JAAT.arg_0 = arg_0;
   JAAT.arg_1 = arg_1;
+  if(string_buffer[JAAT.string_stracker] != NULL){
+    JAAT.string_ptr = string_buffer[JAAT.string_stracker];
+  }
 }
 
 void jaat_start(){
   instruction_pool = (BYTE_LENGHT*)malloc(sizeof(BYTE_LENGHT)*3*pool_size);
+  string_buffer = malloc(sizeof(char*)*pool_size);
 }
 
 void jaat_free(){
   free(instruction_pool);
-  instruction_pool = 0; 
+  instruction_pool = 0;
+  free(string_buffer);
+  string_buffer = 0;
 }
 
 void jaat_exec(){
@@ -384,6 +402,7 @@ void jaat_load_programm(vm_programm *new_prg){
   JAAT.halt = false;
   JAAT.accumulator = 0;
   JAAT.current_pointer = 0;
+  JAAT.string_stracker = 0;
   prg = new_prg;
   parse_instruction();
 }
