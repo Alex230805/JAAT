@@ -39,15 +39,48 @@ int main(void){
       "HLT()"
     }
   };
+
+  vm_programm prg3 = {
+    .programm_lenght = 10,
+    .inst_array = {
+      "PUT(1)",
+      "PUT(1)",
+      "PUT(0)",
+      "ADC#(0,1)",
+      "SWP(0,1)",
+      "INC(2)",
+      "CMP(2, 17)",
+      "JNZ(3)",
+      "PRT(1)",
+      "HLT()"      
+    }
+  };
+  // print a string with a variation of PRT
+  vm_programm prg4 = {
+    .programm_lenght = 2,
+    .inst_array = {
+      "PRT('Hello World')",
+      "HLT()"
+    }
+  };
   jaat_start();   // start point
   
+  printf("Programm 1\n");
   jaat_load_programm(&prg);
-  parse_instruction();
   jaat_loop();
+
+  printf("Programm 2\n");
   jaat_load_programm(&prg2);
-  parse_instruction();
   jaat_loop();
- 
+
+  printf("Programm 3\n");
+  jaat_load_programm(&prg3);
+  jaat_loop();
+
+  printf("Programm 4\n");
+  jaat_load_programm(&prg4);
+  jaat_loop();
+
   jaat_free();    // end point 
   return 0;
 }

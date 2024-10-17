@@ -17,11 +17,12 @@
 #define STACK_TYPES u16t
 #define STACK_LENGHT 32
 #define BYTE_LENGHT u16t
-#define WORD_LEN 16
+#define WORD_LEN 255
 #define DEBUG false
 #define MACHINE_STATE false
 #define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
 #define MAX_PROGRAMM_SIZE 4096
+#define STR_LEN 255
 
 // instruction enum for parsing and instruction check
 
@@ -41,7 +42,10 @@ typedef enum{
   NXT,
   PRV,
   SWP,
-  PRT
+  PRT,
+  PRT_STRING,
+  INC,
+  DEC
 }vm_inst;
 
 // JAAT vm
@@ -52,6 +56,7 @@ typedef struct{
   STACK_TYPES stack[STACK_LENGHT];
   vm_inst current_instruction;
   STACK_TYPES accumulator;
+  char*string_ptr;
   int arg_0;
   int arg_1;
   bool negative;
@@ -89,7 +94,10 @@ void jaat_jeq(int arg_0);
 void jaat_nxt();
 void jaat_prv();
 void jaat_swp(int arg_0, int arg_1);
-void jaat_prt();
+void jaat_prt(int arg_0);
+void jaat_prt_string(char*arg_0);
+void jaat_inc(int arg_0);
+void jaat_dec(int arg_0);
 
 // tag definition
 
@@ -107,6 +115,9 @@ void jaat_prt();
 #define NXT()                  jaat_nxt();             // nxt function: increment the stack pointer by one
 #define PRV()                  jaat_prv();             // prv function: decrement the stack pointer by one 
 #define SWP(arg_0,arg_1)       jaat_swp(arg_0,arg_1);
+#define INC(arg_0)             jaat_inc(arg_0);
+#define DEC(arg_0)             jaat_dec(arg_0);
+#define PRT_STRING(arg_0)             jaat_prt_string(arg_0);
 
 int pool_size = 1024;
 vm JAAT = {0};
@@ -127,7 +138,9 @@ void parse_instruction(){
   int pool_index = 0;
   int arg_0, arg_1;
   char inst[3]; 
+  bool string;
   for(int i=0;i< prg->programm_lenght;i++){
+    string = false;
     arg_0 = 0;
     arg_1 = 0;
     memcpy(inst,prg->inst_array[i], sizeof(char)*3);
@@ -158,6 +171,10 @@ void parse_instruction(){
       type = PRV;
     }else if(strcmp(inst, "SWP") == 0){
       type = SWP;
+    }else if(strcmp(inst, "INC") == 0){
+      type = INC;
+    }else if(strcmp(inst, "DEC") == 0){
+      type = DEC;
     }else{
       fprintf(stderr, "ERROR: no such instruction to parse\n");
       exit(3);
@@ -183,11 +200,21 @@ void parse_instruction(){
           break;
       } 
     }
+    if(prg->inst_array[i][start_point] == 34 || prg->inst_array[i][start_point] == 39){
+      switch(type) {
+        case PRT:
+          type = PRT_STRING;
+          break;
+        default:
+          break;
+      }
+      string = true;
+    }
     end = false;
-    int ptr=0;
+    int ptr=0, ptr_string = 0;
     bool first = false;
-
-    while(!end && ptr < WORD_LEN-start_point){
+    char* str = (char*)malloc(sizeof(char)*STR_LEN);
+    while(!end && ptr < WORD_LEN-start_point && string == false){
       if(prg->inst_array[i][start_point+ptr] == 41){
         end = true;
       }else if(prg->inst_array[i][start_point+ptr] != 32 && prg->inst_array[i][start_point+ptr] != 44){
@@ -202,6 +229,19 @@ void parse_instruction(){
       ptr+=1;
     }
 
+    while(!end && ptr < WORD_LEN-start_point && ptr_string < STR_LEN){
+      if(prg->inst_array[i][start_point+ptr] == 41){
+        end = true;
+      }else if(prg->inst_array[i][start_point+ptr] != 44 && (prg->inst_array[i][start_point+ptr] != 34 || prg->inst_array[i][start_point+ptr] != 39)){
+        str[ptr_string] = prg->inst_array[i][start_point+ptr];
+      }
+      ptr+=1;
+      ptr_string+=1;
+    }
+    if(string){
+      str[ptr_string] = 0;
+      JAAT.string_ptr = str;
+    }
     instruction_pool[pool_index] = type;
     instruction_pool[pool_index+1] = arg_0;
     instruction_pool[pool_index+2] = arg_1;
@@ -305,6 +345,9 @@ void jaat_exec(){
     case PRT:
         PRT(JAAT.arg_0);
         break;
+    case PRT_STRING:
+        PRT_STRING(JAAT.string_ptr);
+        break;
     case JEQ:
         JEQ(JAAT.arg_0);
         break;
@@ -319,6 +362,12 @@ void jaat_exec(){
         break;
     case PRV:
         PRV();
+        break;
+    case INC:
+        INC(JAAT.arg_0);
+        break;
+    case DEC:
+        DEC(JAAT.arg_0);
         break;
     default:
       NO_IMPLEMENTATION();
@@ -336,6 +385,7 @@ void jaat_load_programm(vm_programm *new_prg){
   JAAT.accumulator = 0;
   JAAT.current_pointer = 0;
   prg = new_prg;
+  parse_instruction();
 }
 
 void jaat_hlt(void){
@@ -366,6 +416,15 @@ void jaat_pop(void){
 
 void jaat_adc(int arg_0, int arg_1, bool address_op){
   if(DEBUG) printf("ADC\n");
+  if(arg_0 < 0 && arg_0 > STACK_LENGHT){
+    fprintf(stdout, "WARNING: stack out of bounds for arg_0");
+    return;
+  }
+  if(arg_1 < 0 && arg_1 > STACK_LENGHT && address_op){
+    fprintf(stdout, "WARNING: stack out of bounds for arg_1");
+    return;
+  }
+
   STACK_TYPES res = 0;
   int cache;
   if(address_op){
@@ -384,6 +443,14 @@ void jaat_adc(int arg_0, int arg_1, bool address_op){
 
 void jaat_sbc(int arg_0, int arg_1, bool address_op){
   if(DEBUG) printf("SBC\n");
+  if(arg_0 < 0 && arg_0 > STACK_LENGHT){
+    fprintf(stdout, "WARNING: stack out of bounds for arg_0");
+    return;
+  }
+  if(arg_1 < 0 && arg_1 > STACK_LENGHT && address_op){
+    fprintf(stdout, "WARNING: stack out of bounds for arg_1");
+    return;
+  }
   STACK_TYPES res = 0;
   int cache;
   if(address_op){
@@ -498,6 +565,44 @@ void jaat_swp(int arg_0, int arg_1){
     JAAT.stack[arg_0] = data_2;
     JAAT.stack[arg_1] = data;
   }
+}
+
+
+void jaat_inc(int arg_0){
+  if(DEBUG) printf("INC\n");
+  if(arg_0 >= 0 && arg_0 < STACK_LENGHT){
+    STACK_TYPES res = 0;
+    int cache;
+    cache = JAAT.stack[arg_0] + 1;
+    if(cache > sizeof(STACK_TYPES)*255 ) {
+      JAAT.overflow = true;
+    }
+    if(res == 0) JAAT.zero = true;
+    res = (STACK_TYPES)cache;
+    JAAT.stack[arg_0] = res;   
+  }
+}
+
+void jaat_dec(int arg_0){
+  if(DEBUG) printf("DEC\n");
+  if(arg_0 >= 0 && arg_0 < STACK_LENGHT){
+    STACK_TYPES res = 0;
+    int cache;
+    cache = JAAT.stack[arg_0] - 1;
+    if(cache > sizeof(STACK_TYPES)*255 ) {
+      JAAT.overflow = true;
+    }
+    if(res == 0) JAAT.zero = true;
+    res = (STACK_TYPES)cache;
+    JAAT.stack[arg_0] = res;   
+  }
+}
+
+void jaat_prt_string(char*str){
+  if(DEBUG) printf("PRT_STRING\n");
+  fprintf(stdout, "%s\n", str);
+  free(JAAT.string_ptr);
+  JAAT.string_ptr = NULL;
 }
 
 #endif
