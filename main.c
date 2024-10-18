@@ -6,128 +6,102 @@
 #include "./lib/JAAT.h"
 
 void help_message(){
-  vm_programm help = {
-    .programm_lenght = 9,
-    .inst_array = {
-      "PRT('============================================\n')",
-      "PRT('\nWelcome to JAAT: a custom and simple vm for JIT compiler\n\n')",
-      "PRT('MAIN USAGE: \n\nTo implement a JIT compiler using JAAT you need first a parser\nfor the language, that mean JAAT provide only the intermediate\nlanguage and the vm, but does not include a parser for the instruction.\n')",
-      "PRT('\n\nNormaly a programm can use a parser to generate the vm code using\nthe 'vm_programm struct', that provide the programm length and the array of instruction.\n')",
-      "PRT('JAAT will be called to load the programm and for initialize itsef, then it start the execution.\n')",
-      "PRT('\n\nTo better understand how exactly all of that work I highly recommend to take \na look inside the single file library JAAT.h\n\n')",
-      "PRT('\nBeside -h, you can use the -ex instruction followed by a number to see some example about how the vm work.\n\n')",
-      "PRT('============================================\n\n - btw the helper is written and executed in the vm :D\n')",
-      "HLT()"
-    }
-  };
-  jaat_start();
-  jaat_load_programm(&help);
+
+  Array* help;
+  array_new(help);
+  array_push(help,"PRT('============================================\n')");
+  array_push(help, "PRT('MAIN USAGE: \n\nTo implement a JIT compiler using JAAT you need first a parser\nfor the language, that mean JAAT provide only the intermediate\nlanguage and the vm, but does not include a parser for the instruction.\n')");
+  array_push(help, "PRT('JAAT will be called to load the programm and for initialize itsef, then it start the execution.\n')");
+  array_push(help, "PRT('\n\nTo better understand how exactly all of that work I highly recommend to take \na look inside the single file library JAAT.h\n\n')");
+  array_push(help, "PRT('\nBeside -h, you can use the -ex instruction followed by a number to see some example about how the vm work.\n\n')");
+  array_push(help, "PRT('============================================\n\n - btw the helper is written and executed in the vm :D\n')");
+  array_push(help, "HLT");
+
+  jaat_start(help->size);
+  jaat_load_programm(help);
   jaat_loop();
   jaat_free();
+  array_free(help);
 }
 
 void jaat_ex_1(){
-  vm_programm prg = {
-    .programm_lenght = 9,
-    .inst_array = {
-      "PUT(69)",
-      "POP()",
-      "ADC(0,1)",
-      "PRT()",
-      "CMP(0,420)",
-      "JEQ(8)",
-      "NXT()",
-      "JMP(1)",
-      "HLT()"
-    }
-  };
-  jaat_start();
-  jaat_load_programm(&prg);
+
+  Array* prg;
+  array_new(prg);
+  array_push(prg,"PUT(69)");
+  array_push(prg,"POP()");
+  array_push(prg,"ADC(0,1)");
+  array_push(prg,"PRT()");
+  array_push(prg,"CMP(0, 420)");
+  array_push(prg, "JEQ(8)");
+  array_push(prg, "NXT()");
+  array_push(prg, "JMP(1)");
+  array_push(prg, "HLT()");
+
+  jaat_start(prg->size);
+  jaat_load_programm(prg);
   jaat_loop();
   jaat_free();
+  array_free(prg);
 }
 
 void jaat_ex_2(){
   // fibonacci sequence
-  vm_programm prg2 = {
-    .programm_lenght = 9,
-    .inst_array = {
-      "PUT(1)",
-      "PUT(1)",
-      "ADC#(0,1)",
-      "SWP(0,1)",
-      "PRT(1)", 
-      "CMP(1, 46368)",
-      "JEQ(8)",
-      "JMP(2)",
-      "HLT()"
-    }
-  };
-  jaat_start();
-  jaat_load_programm(&prg2);
+  Array* prg2;
+  array_new(prg2);
+  array_push(prg2, "PUT(1)");
+  array_push(prg2, "PUT(1)");
+  array_push(prg2, "ADC#(0,1)");
+  array_push(prg2, "SWP(0,1)");
+  array_push(prg2, "PRT(1)");
+  array_push(prg2, "CMP(1, 46368)");
+  array_push(prg2, "JEQ(8)");
+  array_push(prg2, "JMP(2)");
+  array_push(prg2, "HLT()");
+
+  jaat_start(prg2->size);
+  jaat_load_programm(prg2);
   jaat_loop();
   jaat_free();
+  array_free(prg2);
 }
 
 void jaat_ex_3(){
 // fibonacci sequence but with a for loop
-  vm_programm prg3 = {
-    .programm_lenght = 10,
-    .inst_array = {
-      "PUT(1)",
-      "PUT(1)",
-      "PUT(0)",
-      "ADC#(0,1)",
-      "SWP(0,1)",
-      "INC(2)",
-      "CMP(2, 17)",
-      "JNZ(3)",
-      "PRT(1)",
-      "HLT()"      
-    }
-  };
-  jaat_start();
-  jaat_load_programm(&prg3);
+  Array* prg3;
+  array_new(prg3);
+  array_push(prg3, "PUT(1)");
+  array_push(prg3, "PUT(1)");
+  array_push(prg3, "PUT(0)");
+  array_push(prg3, "ADC#(0,1)");
+  array_push(prg3, "SWP(0,1)");
+  array_push(prg3, "INC(2)");
+  array_push(prg3, "CMP(2, 17)");
+  array_push(prg3, "JNZ(3)");
+  array_push(prg3, "PRT(1)");
+  array_push(prg3, "HLT()");
+
+  jaat_start(prg3->size);
+  jaat_load_programm(prg3);
   jaat_loop();
   jaat_free();
+  array_free(prg3);
 }
 
 void jaat_ex_4(){
-  // print a string with a variation of PRT
-  vm_programm prg4 = {
-    .programm_lenght = 7,
-    .inst_array = {
-      "PRT('Hello World\n')",
-      "PRT('I'm Alive!!\n')",
-      "PRT('This is JAAT vm, usefull for implement a JIT compiler by only implementing a parser!\n')",
-      "PRT('There is a variation with the '' inside a function that can allow the user to insert a string\n')",
-      "PRT('There is a variation of normal instruction that looks like 'NAME# ..', those are purely address instruction\n')",
-      "PRT('So arg_0 and arg_1 are actually pointer for the memory, always\n')",
-      "HLT()"
-    }
-  };
-  jaat_start();
-  jaat_load_programm(&prg4);
+  Array*prg4;
+  array_new(prg4);
+  array_push(prg4, "PRT('Input test, try to write something: ')");
+  array_push(prg4, "SCN()");
+  array_push(prg4, "PRT('You write: ')");
+  array_push(prg4, "PRT(INPUT)");
+  array_push(prg4, "HLT()");
+
+  jaat_start(prg4->size);
+  jaat_load_programm(prg4);
   jaat_loop();
   jaat_free();
-}
-
-void jaat_ex_5(){
-  vm_programm prg5 = {
-    .programm_lenght = 5,
-    .inst_array = {
-      "PRT('Input test, try to write something: ')",
-      "SCN()",
-      "PRT('You write: ')",
-      "PRT(INPUT)",
-      "HLT()"
-    }
-  };
-
-  jaat_start();
-  jaat_load_programm(&prg5);
-  jaat_loop();
-  jaat_free();
+  array_free(prg4);
 }
 
 int main(int argc, char** argv){
@@ -145,8 +119,6 @@ int main(int argc, char** argv){
           jaat_ex_3();
         }else if(strcmp(argv[i+1], "4") == 0){
           jaat_ex_4();
-        }else if(strcmp(argv[i+1], "5") == 0){
-          jaat_ex_5();
         }else fprintf(stderr,"ERROR: missing argument");
       }
     }

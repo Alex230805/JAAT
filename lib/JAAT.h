@@ -9,6 +9,11 @@
 #include <stdbool.h>
 #include <ctype.h>
 
+#define TYPE char*
+
+#include "./Array.h"
+
+
 #define u8t uint8_t
 #define u16t uint16_t
 #define u32t uint32_t
@@ -21,7 +26,6 @@
 #define DEBUG false
 #define MACHINE_STATE false
 #define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
-#define MAX_PROGRAMM_SIZE 4096
 #define STR_LEN 512
 
 // instruction enum for parsing and instruction check
@@ -77,9 +81,8 @@ int input_tracker_write;
 
 typedef struct{
   int programm_lenght;
-  char inst_array[MAX_PROGRAMM_SIZE][WORD_LEN];
+  char** inst_array;
 }vm_programm;
-
 
 // main functions
 
@@ -87,8 +90,8 @@ void jaat_loop(void);
 void jaat_load(vm_inst instruction, int arg_0,int arg_1);
 void jaat_exec(void);
 void jaat_free(void);
-void jaat_start(void);
-void jaat_load_programm(vm_programm *new_prg);
+void jaat_start(int size);
+void jaat_load_programm(Array *new_prg);
 void parse_instruction(void);
 
 void jaat_hlt(void);
@@ -153,6 +156,7 @@ vm_programm* prg;
 
 
 void parse_instruction(){
+  if(DEBUG) printf("parse_instruction()\n");
   vm_inst type;
   int pool_index = 0;
   int arg_0, arg_1;
@@ -323,6 +327,8 @@ void parse_instruction(){
         fprintf(stderr, "No such constant to parse\n");
         exit(8);
       }
+      free(word);
+      word = 0;
     }
     // put instruction and default parameter into instruction_pool
     instruction_pool[pool_index] = type;
@@ -339,7 +345,7 @@ void parse_instruction(){
     
     pool_index += 3;
 
-    if(pool_index >= pool_size){
+    if(pool_index >= pool_size*3){
       fprintf(stderr, "Too much instruction, pool overflow"); 
       exit(4);
     }
@@ -351,6 +357,7 @@ void parse_instruction(){
 }
 
 void jaat_loop(){
+  if(DEBUG) printf("jaat_loop()\n");
   if(JAAT.programm_counter > pool_size){
     fprintf(stderr, "Programm counter not initialized");
     return;
@@ -383,6 +390,7 @@ void jaat_loop(){
 }
 
 void jaat_load(vm_inst instruction, int arg_0,int arg_1){
+  if(DEBUG) printf("jaat_load()\n");
   JAAT.current_instruction = instruction;
   JAAT.arg_0 = arg_0;
   JAAT.arg_1 = arg_1;
@@ -394,7 +402,9 @@ void jaat_load(vm_inst instruction, int arg_0,int arg_1){
   }
 }
 
-void jaat_start(){
+void jaat_start(int size){
+  if(DEBUG) printf("jaat_start()\n");
+  pool_size = size;
   instruction_pool = (BYTE_LENGHT*)malloc(sizeof(BYTE_LENGHT)*3*pool_size);
   string_buffer = malloc(sizeof(char*)*pool_size);
   constant_type_buffer = malloc(sizeof(vm_constant_type)*pool_size);
@@ -402,6 +412,7 @@ void jaat_start(){
 }
 
 void jaat_free(){
+  if(DEBUG) printf("jaat_free()\n");
   free(instruction_pool);
   instruction_pool = 0;
   free(string_buffer);
@@ -410,9 +421,12 @@ void jaat_free(){
   input_buffer = 0;
   free(constant_type_buffer);
   constant_type_buffer = 0;
+  free(prg);
+  prg = 0;
 }
 
 void jaat_exec(){
+  if(DEBUG) printf("jaat_exec()\n");
   switch(JAAT.current_instruction){
     case HLT:
         HLT();   
@@ -484,7 +498,18 @@ void jaat_exec(){
   }
   return;
 }
-void jaat_load_programm(vm_programm *new_prg){
+void jaat_load_programm(Array *new_prg){
+  if(DEBUG) printf("jaat_load_programm()\n");
+  // create local array
+  prg = (vm_programm*)malloc(sizeof(vm_programm));
+  prg->inst_array = (char**)malloc(sizeof(char*)* new_prg->nelem+1);
+  for(int i=0;i<new_prg->nelem;i++){
+    char *st = NULL;
+    array_get(new_prg, i, st);
+    prg->inst_array[i] = st;
+  }
+  prg->programm_lenght = new_prg->nelem;
+
   JAAT.programm_counter = 0;
   JAAT.negative = false;
   JAAT.overflow = false;
@@ -495,7 +520,6 @@ void jaat_load_programm(vm_programm *new_prg){
   JAAT.buffer_tracker = 0;
   JAAT.input_tracker_read = 0;
   JAAT.input_tracker_write = 0;
-  prg = new_prg;
   parse_instruction();
 }
 
