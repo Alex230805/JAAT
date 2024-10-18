@@ -25,17 +25,17 @@ void help_message(){
 }
 
 void jaat_ex_1(){
-
   Array* prg;
   array_new(prg);
+  array_push(prg,"PRT('put 69 into stack and add 1 until it reach 420\n')");
   array_push(prg,"PUT(69)");
   array_push(prg,"POP()");
   array_push(prg,"ADC(0,1)");
   array_push(prg,"PRT()");
   array_push(prg,"CMP(0, 420)");
-  array_push(prg, "JEQ(8)");
+  array_push(prg, "JEQ(9)");
   array_push(prg, "NXT()");
-  array_push(prg, "JMP(1)");
+  array_push(prg, "JMP(2)");
   array_push(prg, "HLT()");
 
   jaat_start(prg->size);
@@ -49,14 +49,15 @@ void jaat_ex_2(){
   // fibonacci sequence
   Array* prg2;
   array_new(prg2);
+  array_push(prg2, "PRT('fibonacci sequence\n')");
   array_push(prg2, "PUT(1)");
   array_push(prg2, "PUT(1)");
   array_push(prg2, "ADC#(0,1)");
   array_push(prg2, "SWP(0,1)");
   array_push(prg2, "PRT(1)");
   array_push(prg2, "CMP(1, 46368)");
-  array_push(prg2, "JEQ(8)");
-  array_push(prg2, "JMP(2)");
+  array_push(prg2, "JEQ(9)");
+  array_push(prg2, "JMP(3)");
   array_push(prg2, "HLT()");
 
   jaat_start(prg2->size);
@@ -70,6 +71,7 @@ void jaat_ex_3(){
 // fibonacci sequence but with a for loop
   Array* prg3;
   array_new(prg3);
+  array_push(prg3, "PRT('fibonacci sequence, but with for loop locked on 17\n')");
   array_push(prg3, "PUT(1)");
   array_push(prg3, "PUT(1)");
   array_push(prg3, "PUT(0)");
