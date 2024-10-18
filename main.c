@@ -11,12 +11,12 @@ void help_message(){
     .inst_array = {
       "PRT('============================================\n')",
       "PRT('\nWelcome to JAAT: a custom and simple vm for JIT compiler\n\n')",
-      "PRT('MAIN USAGE: \n\nTo implement a JIT compiler using JAAT you need first a parser\nfor the language, that mean JAAT provide only the intermediate\nlanguage and the vm, but does not include a parser for the instruction.')",
-      "PRT('\n\nNormaly a programm can use a parser to generate the vm code using\nthe 'vm_programm struct', that provide the programm length and the array of instruction.')",
-      "PRT('JAAT will be called to load the programm and for initialize itsef, then it start the execution.')",
+      "PRT('MAIN USAGE: \n\nTo implement a JIT compiler using JAAT you need first a parser\nfor the language, that mean JAAT provide only the intermediate\nlanguage and the vm, but does not include a parser for the instruction.\n')",
+      "PRT('\n\nNormaly a programm can use a parser to generate the vm code using\nthe 'vm_programm struct', that provide the programm length and the array of instruction.\n')",
+      "PRT('JAAT will be called to load the programm and for initialize itsef, then it start the execution.\n')",
       "PRT('\n\nTo better understand how exactly all of that work I highly recommend to take \na look inside the single file library JAAT.h\n\n')",
       "PRT('\nBeside -h, you can use the -ex instruction followed by a number to see some example about how the vm work.\n\n')",
-      "PRT('============================================\n\n - btw the helper is written and executed in the vm :D')",
+      "PRT('============================================\n\n - btw the helper is written and executed in the vm :D\n')",
       "HLT()"
     }
   };
@@ -97,12 +97,12 @@ void jaat_ex_4(){
   vm_programm prg4 = {
     .programm_lenght = 7,
     .inst_array = {
-      "PRT('Hello World')",
-      "PRT('I'm Alive!!')",
-      "PRT('This is JAAT vm, usefull for implement a JIT compiler by only implementing a parser!')",
-      "PRT('There is a variation with the '' inside a function that can allow the user to insert a string')",
-      "PRT('There is a variation of normal instruction that looks like 'NAME# ..', those are purely address instruction')",
-      "PRT('So arg_0 and arg_1 are actually pointer for the memory, always')",
+      "PRT('Hello World\n')",
+      "PRT('I'm Alive!!\n')",
+      "PRT('This is JAAT vm, usefull for implement a JIT compiler by only implementing a parser!\n')",
+      "PRT('There is a variation with the '' inside a function that can allow the user to insert a string\n')",
+      "PRT('There is a variation of normal instruction that looks like 'NAME# ..', those are purely address instruction\n')",
+      "PRT('So arg_0 and arg_1 are actually pointer for the memory, always\n')",
       "HLT()"
     }
   };
@@ -111,6 +111,25 @@ void jaat_ex_4(){
   jaat_loop();
   jaat_free();
 }
+
+void jaat_ex_5(){
+  vm_programm prg5 = {
+    .programm_lenght = 5,
+    .inst_array = {
+      "PRT('Input test, try to write something: ')",
+      "SCN()",
+      "PRT('You write: ')",
+      "PRT(INPUT)",
+      "HLT()"
+    }
+  };
+
+  jaat_start();
+  jaat_load_programm(&prg5);
+  jaat_loop();
+  jaat_free();
+}
+
 int main(int argc, char** argv){
   if(argc > 1){
     for(int i=0; i<argc;i++){
@@ -126,6 +145,8 @@ int main(int argc, char** argv){
           jaat_ex_3();
         }else if(strcmp(argv[i+1], "4") == 0){
           jaat_ex_4();
+        }else if(strcmp(argv[i+1], "5") == 0){
+          jaat_ex_5();
         }else fprintf(stderr,"ERROR: missing argument");
       }
     }
