@@ -13,15 +13,41 @@ void help_message(){
   array_push(help, "PRT('MAIN USAGE: \n\nTo implement a JIT compiler using JAAT you need first a parser\nfor the language, that mean JAAT provide only the intermediate\nlanguage and the vm, but does not include a parser for the instruction.\n')");
   array_push(help, "PRT('JAAT will be called to load the programm and for initialize itsef, then it start the execution.\n')");
   array_push(help, "PRT('\n\nTo better understand how exactly all of that work I highly recommend to take \na look inside the single file library JAAT.h\n\n')");
-  array_push(help, "PRT('\nBeside -h, you can use the -ex instruction followed by a number to see some example about how the vm work.\n\n')");
+  array_push(help, "PRT('\nBeside -h, you can use the -ex instruction followed by a number to see some example about how the vm work.\n')");
+  array_push(help, "PRT('You can type -l to get a list of all possible instruction\n')");
   array_push(help, "PRT('============================================\n\n - btw the helper is written and executed in the vm :D\n')");
   array_push(help, "HLT");
 
-  jaat_start(help->size);
-  jaat_load_programm(help);
-  jaat_loop();
-  jaat_free();
-  array_free(help);
+  launch_vm(help);
+}
+
+
+void list_message(){
+  Array*list;
+  array_new(list);
+  array_push(list,"PRT('============================================\n\n')");
+  array_push(list, "PRT('LIST OF VALID INSTRUCTION:\n\n')");
+  array_push(list, "PRT('HLT: halt the virtual processor, you need this to stop your programm\n')");
+  array_push(list, "PRT('PUT: put number passed by argument in stack , use variation with ACC to put accumulator content in stack\n')");
+  array_push(list, "PRT('POP: pop content from stack and put it in accumulator\n')");
+  array_push(list, "PRT('GET: get thing from stack and put it inside accumulator, it use the argument provided to address the stack\n')");
+  array_push(list, "PRT('ADC: add accumulator with content of location provided by the second argument, then put the result in the location provided by the first argument, you can use the variation address by add # before parentesis\n')");
+  array_push(list, "PRT('SBC: same as ADC but it perform subtraction\n')");
+  array_push(list, "PRT('JMP: jump in a specific location of the programm provided by the first argument\n')");
+  array_push(list, "PRT('JNZ: same as jump but only if the result of the previous operation IS NOT ZERO\n')");
+  array_push(list, "PRT('JPO: same as jump but only if the result of the previous operation return an OVERFLOW\n')");
+  array_push(list, "PRT('JEQ: same as jump but if the result of a comparison return an equal state, aka zero flag is setted\n')");
+
+  array_push(list, "PRT('CMP: compare two element, first argument is used to get info from the stack, the second is used to set the compare number. You can use the # variation to use both element as address \n')");
+  array_push(list, "PRT('NXT and PRV: use to increment or decrement MANUALLY the stack pointer\n')");
+  array_push(list, "PRT('PRT: print thing on stdout using the first argument that can be a location in the stack, a costant like INPUT to print out the keyboard bufer, or a direct string\n')");
+  array_push(list, "PRT('INC: increment the number int the indicated location\n')");
+  array_push(list, "PRT('DEC: same as INC but it subtract 1 from the number in stack\n')");
+  array_push(list, "PRT('SCN: scan keyboard input and put it in the machine circular buffer\n\n')");
+  array_push(list, "PRT('for reference, even this untility is written in the vm language and executed by the vm itself\n\n')");
+  array_push(list,"PRT('============================================\n\n')");
+  array_push(list, "HLT()");
+  launch_vm(list);
 }
 
 void jaat_ex_1(){
@@ -38,11 +64,7 @@ void jaat_ex_1(){
   array_push(prg, "JMP(2)");
   array_push(prg, "HLT()");
 
-  jaat_start(prg->size);
-  jaat_load_programm(prg);
-  jaat_loop();
-  jaat_free();
-  array_free(prg);
+  launch_vm(prg);
 }
 
 void jaat_ex_2(){
@@ -59,12 +81,9 @@ void jaat_ex_2(){
   array_push(prg2, "JEQ(9)");
   array_push(prg2, "JMP(3)");
   array_push(prg2, "HLT()");
+  
+  launch_vm(prg2);
 
-  jaat_start(prg2->size);
-  jaat_load_programm(prg2);
-  jaat_loop();
-  jaat_free();
-  array_free(prg2);
 }
 
 void jaat_ex_3(){
@@ -83,11 +102,8 @@ void jaat_ex_3(){
   array_push(prg3, "PRT(1)");
   array_push(prg3, "HLT()");
 
-  jaat_start(prg3->size);
-  jaat_load_programm(prg3);
-  jaat_loop();
-  jaat_free();
-  array_free(prg3);
+  launch_vm(prg3);
+
 }
 
 void jaat_ex_4(){
@@ -99,11 +115,7 @@ void jaat_ex_4(){
   array_push(prg4, "PRT(INPUT)");
   array_push(prg4, "HLT()");
 
-  jaat_start(prg4->size);
-  jaat_load_programm(prg4);
-  jaat_loop();
-  jaat_free();
-  array_free(prg4);
+  launch_vm(prg4);
 }
 
 int main(int argc, char** argv){
@@ -112,7 +124,9 @@ int main(int argc, char** argv){
       if((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)){
         help_message();
       }
-      if(strcmp(argv[i], "-ex") == 0 && argc > i+1){
+      if((strcmp(argv[i], "-l") == 0) || (strcmp(argv[i], "--list") == 0)){
+        list_message();
+      }if(strcmp(argv[i], "-ex") == 0 && argc > i+1){
         if(strcmp(argv[i+1], "1") == 0) {
           jaat_ex_1();
         }else if(strcmp(argv[i+1], "2") == 0){

@@ -14,7 +14,7 @@
 #define u32t uint32_t
 #define u64t uint64_t
 
-#define START_DIM 16
+#define START_DIM 8
 
 #ifndef TYPE
 
@@ -64,7 +64,9 @@ typedef struct{
 
 #define array_realloc(Array_h) \
   TYPE* new_arr = (TYPE*)malloc(sizeof(TYPE)*Array_h->size*2);\
-  memcpy(new_arr, Array_h->arr, Array_h->size);\
+  for(int i=0;i<Array_h->nelem;i++){\
+    new_arr[i] = Array_h->arr[i];\
+  }\
   free(Array_h->arr);\
   Array_h->arr = new_arr;\
   Array_h->size = Array_h->size *2;
