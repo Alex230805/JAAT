@@ -126,6 +126,42 @@ int main(int argc, char** argv){
       }
       if((strcmp(argv[i], "-l") == 0) || (strcmp(argv[i], "--list") == 0)){
         list_message();
+      }if((strcmp(argv[i], "-n") == 0) || (strcmp(argv[i], "--new") == 0)){
+        if(argv[i+1] != NULL){
+          FILE *programm;
+          if((programm = fopen(argv[i+1], "rb")) == NULL){
+            fprintf(stderr, "ERROR: unable to open file -> %d\n", errno);
+            exit(errno);
+          }
+          Array* custom_programm;
+          array_new(custom_programm);
+          fseek(programm, 0,SEEK_SET);
+          char* buffer;
+          char * state = "a"; 
+          while(state != NULL){
+            buffer = (char*)malloc(sizeof(char)*255);
+            state = fgets(buffer, 255, programm);
+            if(buffer[0] != 10){
+              char new_buffer[255];
+              for(int i=0;i<255 && buffer[i] != 0; i++){
+
+                if(buffer[i] == 92 && buffer[i+1] == 110){
+                  buffer[i] = 10;
+                  buffer[i+1] = 32;
+                  strcpy(new_buffer, &buffer[i+2]);
+                  strcpy(&buffer[i+1], new_buffer);
+                }
+              }
+              array_push(custom_programm, buffer);
+            }
+          }
+          custom_programm->nelem -= 1;
+          launch_vm(custom_programm);
+          fclose(programm);
+
+        }else{
+          fprintf(stderr,"ERROR: missing argument");
+        }
       }if(strcmp(argv[i], "-ex") == 0 && argc > i+1){
         if(strcmp(argv[i+1], "1") == 0) {
           jaat_ex_1();

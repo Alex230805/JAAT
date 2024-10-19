@@ -1,0 +1,6 @@
+PRT('Test programm to check if you can load from external file \nTry to write something: ')
+SCN()
+PRT('You write: ')
+PRT(INPUT)
+PRT('\n\n')
+HLT()
