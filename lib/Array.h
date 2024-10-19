@@ -79,7 +79,12 @@ typedef struct{
 
 #define array_cpy(Array_h, POINTER, SIZE, DATA) \
   if(POINTER >= 0 && POINTER <= Array_h->size){\
-    memcpy(DATA, &Array_h->arr[POINTER], SIZE);\
+    TYPE* buffer = (TYPE*)malloc(sizeof(TYPE)*SIZE);\
+    for(int i=0;i<SIZE;i++){\
+      buffer[i] = Array_h-arr[POINTER+i];\
+    }\
+    DATA = buffer;\
   }
+
 
 #endif
