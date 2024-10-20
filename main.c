@@ -17,7 +17,7 @@ void help_message(){
   array_push(help, "PRT('USING JAAT IN YOUR PROJECT:\n\n')");
   array_push(help, "PRT('To include JAAT you need to define first the macro JAAT_IMPLEMENTATION that will use the header like a c file, with all the implementation. This design choice is made with the goal of mantain a simple but yet powerfull architecture.\n\n')");
   array_push(help, "PRT('To load programm in JAAT you need a dynamic array that is needed to dinamically alloc the internal buffer of JAAT and not waste any memory.\n\n')");
-  array_push(help, "PRT('to launch JAAT you can use the macro launch(vm) that use a reference to a dynami array as first argument, or you can do manually.\n')");
+  array_push(help, "PRT('to launch JAAT you can use the macro launch_vm() that use a reference to a dynamic array as first argument, or you can do manually.\n')");
   array_push(help, "PRT('If you want to use the JAAT executable for run programm you can provide with the argument -n a new file with your programm written in the JAAT assembly, and the executable will automatically create a dynamic array and launch the VM.\n\n')");
   array_push(help, "PRT('For more example you can check the main.c and see some programms or you can use the -l parameter to get an helper for all instruction.'\n)");
   array_push(help, "PRT('============================================\n\n - btw the helper is written and executed in the vm :D\n')");
@@ -106,7 +106,9 @@ void jaat_ex_2(){
   array_push(prg2, "JEQ(9)");
   array_push(prg2, "JMP(3)");
   array_push(prg2, "HLT()");
-  
+  char*buffer;
+  array_get(prg2, 0, buffer);
+  printf("%s\n\n",buffer);
   launch_vm(prg2);
 
 }
@@ -161,26 +163,36 @@ int main(int argc, char** argv){
           Array* custom_programm;
           array_new(custom_programm);
           fseek(programm, 0,SEEK_SET);
-          char* buffer;
+          char* buffer_t;
           char * state = "a"; 
           while(state != NULL){
-            buffer = (char*)malloc(sizeof(char)*255);
-            state = fgets(buffer, 255, programm);
-            if(buffer[0] != 10){
+            buffer_t = (char*)malloc(sizeof(char)*255);
+            state = fgets(buffer_t, 255, programm);
+            // check for special chars in string like \n or \t
+            if(buffer_t[0] != 10 && (buffer_t[0] != 47 && buffer_t[1] != 47 && state != NULL)){
               char new_buffer[255];
-              for(int i=0;i<255 && buffer[i] != 0; i++){
+              for(int i=0;i<255 && buffer_t[i] != 0; i++){
 
-                if(buffer[i] == 92 && buffer[i+1] == 110){
-                  buffer[i] = 10;
-                  buffer[i+1] = 32;
-                  strcpy(new_buffer, &buffer[i+2]);
-                  strcpy(&buffer[i+1], new_buffer);
+                if(buffer_t[i] == 92 && buffer_t[i+1] == 110){  // \n string literal
+                  buffer_t[i] = 10;
+                  strcpy(new_buffer, &buffer_t[i+2]);
+                  strcpy(&buffer_t[i+1], new_buffer);
                 }
+                if(buffer_t[i] == 92 && buffer_t[i+1] == 116){  // \t string literal
+                  buffer_t[i] = 9;
+                  strcpy(new_buffer, &buffer_t[i+2]);
+                  strcpy(&buffer_t[i+1], new_buffer);
+                }
+
               }
-              array_push(custom_programm, buffer);
+            
+              char* len = (char*)memchr(buffer_t, ')', strlen(buffer_t));
+              if(len != NULL){
+                buffer_t[len-buffer_t+1] = 0;
+                array_push(custom_programm, buffer_t);
+              }
             }
           }
-          custom_programm->nelem -= 1;
           launch_vm(custom_programm);
           fclose(programm);
 

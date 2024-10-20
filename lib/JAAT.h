@@ -196,9 +196,7 @@ void parse_instruction(){
   bool is_constant = false;
   int buffer_index = 0;
   bool halt_exist = false;
-  bool skip;
   for(int i=0;i< prg->programm_lenght;i++){
-    skip = false;
     string = false;
     is_constant = false;
     arg_0 = 0;
@@ -245,8 +243,6 @@ void parse_instruction(){
       type = JSR;
     }else if(strcmp(inst, "RTS") == 0){
       type = RTS;
-    }else if(inst[0] == 47 && inst[1] == 47){
-      skip = true;
     }else{
       fprintf(stderr, "ERROR: no such instruction to parse, failed on line %d\n", i+1);
       exit(3);
@@ -256,14 +252,14 @@ void parse_instruction(){
     bool end = false;
     
     // find the starting point for parsing the arguments
-    for(start_point = 0; start_point < WORD_LEN && !end && !skip ;start_point++){
+    for(start_point = 0; start_point < WORD_LEN && !end ;start_point++){
       if(prg->inst_array[i][start_point] == 40){
         end = true;
       }
     }
 
     // check for full address variation
-    if((prg->inst_array[i][start_point-2] == 35) && !skip){
+    if(prg->inst_array[i][start_point-2] == 35){
       switch(type){
         case ADC:
           type = ADC_ADR;
@@ -281,7 +277,7 @@ void parse_instruction(){
     }
 
     // check for string variation
-    if((prg->inst_array[i][start_point] == 34 || prg->inst_array[i][start_point] == 39) && !skip){
+    if(prg->inst_array[i][start_point] == 34 || prg->inst_array[i][start_point] == 39){
       switch(type) {
         case PRT:
           type = PRT_STRING;
@@ -294,7 +290,7 @@ void parse_instruction(){
     }
 
     // check for constant variation
-    if((isupper(prg->inst_array[i][start_point]) > 0) && !skip){
+    if(isupper(prg->inst_array[i][start_point]) > 0){
       switch(type){
         case PRT:
           type = PRT_CONSTANT;
@@ -315,7 +311,7 @@ void parse_instruction(){
     char* str = 0;
 
     // check for default parameter arg_0,arg_1
-    while(!end && ptr < WORD_LEN-start_point && string == false && is_constant == false && !skip){
+    while(!end && ptr < WORD_LEN-start_point && string == false && is_constant == false){
       if(prg->inst_array[i][start_point+ptr] == 41 && prg->inst_array[i][start_point+ptr+1] == 0){
         end = true;
       }else if(prg->inst_array[i][start_point+ptr] != 32 && prg->inst_array[i][start_point+ptr] != 44){
@@ -331,7 +327,8 @@ void parse_instruction(){
     }
 
     // check for lenght of string
-    while(!end && current_str_len < STR_LEN && string == true && is_constant == false && !skip){
+    end = false;
+    while(!end && current_str_len < STR_LEN && string == true && is_constant == false){
       if(prg->inst_array[i][start_point+ptr] == 41 && prg->inst_array[i][start_point+ptr+1] == 0){
         end = true;
       }else {
@@ -341,7 +338,8 @@ void parse_instruction(){
     }
 
     // check for lenght of constant
-    while(!end && current_str_len < STR_LEN && is_constant == true && string == false && !skip){
+    end = false;
+    while(!end && current_str_len < STR_LEN && is_constant == true && string == false){
      if(prg->inst_array[i][start_point+ptr] == 41 && prg->inst_array[i][start_point+ptr+1] == 0){
         end = true;
       }else {
@@ -351,7 +349,7 @@ void parse_instruction(){
     }
     
     // check for string alignment 
-    if(string && !skip){
+    if(string){
       str = (char*)malloc(sizeof(char)*current_str_len-2);
       memcpy(str, &prg->inst_array[i][start_point+1],sizeof(char)*current_str_len-2);
       str[current_str_len-2] = 0;
@@ -360,7 +358,7 @@ void parse_instruction(){
     }
 
     // check for constant alignment 
-    if(is_constant && !skip){
+    if(is_constant){
       char* word = (char*)malloc(sizeof(char)*current_str_len);
       memcpy(word, &prg->inst_array[i][start_point], sizeof(char)*current_str_len);
       word[current_str_len] = 0;
@@ -375,17 +373,14 @@ void parse_instruction(){
       word = 0;
     }
     // put instruction and default parameter into instruction_pool
-    if(!skip){
-      instruction_pool[pool_index] = type;
-      instruction_pool[pool_index+1] = arg_0;
-      instruction_pool[pool_index+2] = arg_1;
-      pool_index += 3;
-    }
-
+    instruction_pool[pool_index] = type;
+    instruction_pool[pool_index+1] = arg_0;
+    instruction_pool[pool_index+2] = arg_1;
+    pool_index += 3;
 
     // debug flag
 
-    if(DEBUG && !skip){
+    if(DEBUG){
       printf("instruction type: %d\n", instruction_pool[pool_index]);
       printf("arg_0: %d\n", instruction_pool[pool_index+1]);
       printf("arg_1: %d\n\n", instruction_pool[pool_index+2]);
