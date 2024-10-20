@@ -316,7 +316,7 @@ void parse_instruction(){
 
     // check for default parameter arg_0,arg_1
     while(!end && ptr < WORD_LEN-start_point && string == false && is_constant == false && !skip){
-      if(prg->inst_array[i][start_point+ptr] == 41){
+      if(prg->inst_array[i][start_point+ptr] == 41 && prg->inst_array[i][start_point+ptr+1] == 0){
         end = true;
       }else if(prg->inst_array[i][start_point+ptr] != 32 && prg->inst_array[i][start_point+ptr] != 44){
         if (!first) {
@@ -332,7 +332,7 @@ void parse_instruction(){
 
     // check for lenght of string
     while(!end && current_str_len < STR_LEN && string == true && is_constant == false && !skip){
-      if(prg->inst_array[i][start_point+ptr] == 41){
+      if(prg->inst_array[i][start_point+ptr] == 41 && prg->inst_array[i][start_point+ptr+1] == 0){
         end = true;
       }else {
         current_str_len += 1;
@@ -342,7 +342,7 @@ void parse_instruction(){
 
     // check for lenght of constant
     while(!end && current_str_len < STR_LEN && is_constant == true && string == false && !skip){
-     if(prg->inst_array[i][start_point+ptr] == 41){
+     if(prg->inst_array[i][start_point+ptr] == 41 && prg->inst_array[i][start_point+ptr+1] == 0){
         end = true;
       }else {
         current_str_len += 1;

@@ -13,10 +13,15 @@ void help_message(){
   array_push(help, "PRT('MAIN USAGE: \n\nTo implement a JIT compiler using JAAT you need first a parser\nfor the language, that mean JAAT provide only the intermediate\nlanguage and the vm, but does not include a parser for the instruction.\n')");
   array_push(help, "PRT('JAAT will be called to load the programm and for initialize itsef, then it start the execution.\n')");
   array_push(help, "PRT('\n\nTo better understand how exactly all of that work I highly recommend to take \na look inside the single file library JAAT.h\n\n')");
-  array_push(help, "PRT('\nBeside -h, you can use the -ex instruction followed by a number to see some example about how the vm work.\n')");
-  array_push(help, "PRT('You can type -l to get a list of all possible instruction\n')");
+  array_push(help, "PRT('\nBeside -h, you can use the -ex instruction followed by a number to see some example about how the vm work.\n\n')");
+  array_push(help, "PRT('USING JAAT IN YOUR PROJECT:\n\n')");
+  array_push(help, "PRT('To include JAAT you need to define first the macro JAAT_IMPLEMENTATION that will use the header like a c file, with all the implementation. This design choice is made with the goal of mantain a simple but yet powerfull architecture.\n\n')");
+  array_push(help, "PRT('To load programm in JAAT you need a dynamic array that is needed to dinamically alloc the internal buffer of JAAT and not waste any memory.\n\n')");
+  array_push(help, "PRT('to launch JAAT you can use the macro launch(vm) that use a reference to a dynami array as first argument, or you can do manually.\n')");
+  array_push(help, "PRT('If you want to use the JAAT executable for run programm you can provide with the argument -n a new file with your programm written in the JAAT assembly, and the executable will automatically create a dynamic array and launch the VM.\n\n')");
+  array_push(help, "PRT('For more example you can check the main.c and see some programms or you can use the -l parameter to get an helper for all instruction.'\n)");
   array_push(help, "PRT('============================================\n\n - btw the helper is written and executed in the vm :D\n')");
-  array_push(help, "HLT");
+  array_push(help, "HLT()");
 
   launch_vm(help);
 }
@@ -26,27 +31,45 @@ void list_message(){
   Array*list;
   array_new(list);
   array_push(list,"PRT('============================================\n\n')");
+  array_push(list, "PRT('SINTAX STRUCTURE:\n\n')");
+  array_push(list, "PRT('NODE : You can add comment inside your code by start a line with //, this tell the parser to not analize this line and go for the next one\n')");
+
+  array_push(list, "PRT('A standard instruction have a name of three chars that look like: PRT() \n')");
+  array_push(list, "PRT('Any instruction have a name followed by two parantesis.\n\n')");
+  array_push(list, "PRT('Inside those parentesis you can put the accepted argument for the instruction that can be integer, constant like INPUT or ACC (that stands for input and accumulator), or even entire phrase like the PRT('') function variation\n\n')");
+  array_push(list, "PRT('Some instruction can be used in different ways, in some cases you need a specific mode to operate\n')");
+  array_push(list, "PRT('Normally an instruction use form 0 to two arguments, by adding # just before the parentesis will tell the parser to use all argument like pointer for the stack\n\n')");
+  array_push(list, "PRT('An example can be the CMP(arg_0,arg_1) function that use the first argument for get the number and the second for condition.\n')");
+  array_push(list, "PRT('If CMP is written like CMP#(arg_0,arg_1) all two argument will be pointer to the stack\n\n')");
+  array_push(list, "PRT('SUMMARY:\n\n')");
+  array_push(list, "PRT('-> FUN(arg_0,arg_1)  : normal instruction with two argument\n')");
+  array_push(list, "PRT('-> FUN#(arg_0,arg_1) : normal instruction but all argument are pointer\n')");
+  array_push(list, "PRT('-> FUN(ACC)          : normal instruction but ACC is a costant that reference something with the processor\n')");
+  array_push(list, "PRT('-> FUN('Hello World'): normal function that accept a string\n')");
+  array_push(list, "PRT('\n'\n)");
   array_push(list, "PRT('LIST OF VALID INSTRUCTION:\n\n')");
-  array_push(list, "PRT('HLT: halt the virtual processor, you need this to stop your programm\n')");
-  array_push(list, "PRT('PUT: put number passed by argument in stack , use variation with ACC to put accumulator content in stack\n')");
-  array_push(list, "PRT('POP: pop content from stack and put it in accumulator\n')");
-  array_push(list, "PRT('GET: get thing from stack and put it inside accumulator, it use the argument provided to address the stack\n')");
-  array_push(list, "PRT('ADC: add accumulator with content of location provided by the second argument, then put the result in the location provided by the first argument, you can use the variation address by add # before parentesis\n')");
-  array_push(list, "PRT('SBC: same as ADC but it perform subtraction\n')");
-  array_push(list, "PRT('JMP: jump in a specific location of the programm provided by the first argument\n')");
-  array_push(list, "PRT('JNZ: same as jump but only if the result of the previous operation IS NOT ZERO\n')");
-  array_push(list, "PRT('JPO: same as jump but only if the result of the previous operation return an OVERFLOW\n')");
-  array_push(list, "PRT('JEQ: same as jump but if the result of a comparison return an equal state, aka zero flag is setted\n')");
-  array_push(list, "PRT('JSR: jump to subroutine and save return address in the last 256 location in stack\n')");  
-  array_push(list, "PRT('RTS: return from subroutine by set the programm counter to the saved address of jsr\n')");
-  array_push(list, "PRT('CMP: compare two element, first argument is used to get info from the stack, the second is used to set the compare number. You can use the # variation to use both element as address \n')");
-  array_push(list, "PRT('NXT and PRV: use to increment or decrement MANUALLY the stack pointer\n')");
-  array_push(list, "PRT('PRT: print thing on stdout using the first argument that can be a location in the stack, a costant like INPUT to print out the keyboard bufer, or a direct string\n')");
-  array_push(list, "PRT('INC: increment the number int the indicated location\n')");
-  array_push(list, "PRT('DEC: same as INC but it subtract 1 from the number in stack\n')");
-  array_push(list, "PRT('SCN: scan keyboard input and put it in the machine circular buffer\n\n')");
+  array_push(list, "PRT('HLT() : halt the virtual processor, you need this to stop your programm\n\n')");
+  array_push(list, "PRT('PUT(arg_0) : put number passed by argument in stack , use variation with ACC to put accumulator content in stack\n\n')");
+  array_push(list, "PRT('POP(arg_0) : pop content from stack and put it in accumulator\n\n')");
+  array_push(list, "PRT('GET(arg_0) : get thing from stack and put it inside accumulator, it use the argument provided to address the stack\n\n')");
+  array_push(list, "PRT('ADC(arg_0,arg_1) : add accumulator with content of location provided by the second argument, then put the result in the location provided by the first argument, you can use the variation address by add # before parentesis\n\n')");
+  array_push(list, "PRT('SBC(arg_0,arg_1) : same as ADC but it perform subtraction\n\n')");
+  array_push(list, "PRT('JMP(arg_0) : jump in a specific location of the programm provided by the first argument\n\n')");
+  array_push(list, "PRT('JNZ(arg_0) : same as jump but only if the result of the previous operation IS NOT ZERO\n\n')");
+  array_push(list, "PRT('JPO(arg_0) : same as jump but only if the result of the previous operation return an OVERFLOW\n\n')");
+  array_push(list, "PRT('JEQ(arg_0) : same as jump but if the result of a comparison return an equal state, aka zero flag is setted\n\n')");
+  array_push(list, "PRT('JSR(arg_0) : jump to subroutine and save return address in the last 256 location in stack\n\n')");  
+  array_push(list, "PRT('RTS(): return from subroutine by set the programm counter to the saved address of jsr\n\n')");
+  array_push(list, "PRT('CMP(arg_0,arg_1) : compare two element, first argument is used to get info from the stack, the second is used to set the compare number. You can use the # variation to use both element as address \n\n')");
+  array_push(list, "PRT('NXT() and PRV: use to increment or decrement MANUALLY the stack pointer\n\n')");
+  array_push(list, "PRT('PRT(arg_0) : print thing on stdout using the first argument that can be a location in the stack, a costant like INPUT to print out the keyboard bufer, or a direct string\n\n')");
+  array_push(list, "PRT('INC(arg_0) : increment the number int the indicated location\n\n')");
+  array_push(list, "PRT('DEC(arg_0): same as INC but it subtract 1 from the number in stack\n\n')");
+  array_push(list, "PRT('SCN() : scan keyboard input and put it in the machine circular buffer\n\n')");
+  array_push(list, "PRT('SWP(arg_0,arg_1) : swap data between two block of memory using arguments for addressing the stack\n\n')");
   array_push(list, "PRT('for reference, even this untility is written in the vm language and executed by the vm itself\n\n')");
-  array_push(list, "PRT('You can add comment inside your code by start a line with //, this tell the parser to not analize this line and go for the next one\n')")
+  array_push(list, "PRT('NOTE: This is only a surface ride of the vm, if you want to know more I recommend to check out JAAT.h\n\n')");
+
   array_push(list,"PRT('============================================\n\n')");
   array_push(list, "HLT()");
   launch_vm(list);
@@ -176,6 +199,12 @@ int main(int argc, char** argv){
         }else fprintf(stderr,"ERROR: missing argument");
       }
     }
+  }else{
+    printf("Possible parameters:\n");
+    printf("-h : print help\n");
+    printf("-l : print list of instruction\n");
+    printf("-ex [n] : execute some example programm\n");
+    printf("-n [file] : load external programm\n");
   }
   return 0;
 }
