@@ -1,0 +1,16 @@
+// main function
+PUT(0)
+PUT(0)
+PRT('Test programm, for loop with 20 iteration and subroutine\n')
+JSR(5)
+HLT()
+
+
+//this is a comment, down here there is the subroutine 
+ADC#(1,0)
+PRT(1)
+ADC(0,1)
+CMP(1, 20)
+JNZ(5)
+RTS()
+

@@ -32,7 +32,15 @@
 #define DEBUG false
 #define MACHINE_STATE false
 #define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
+
+#define ILLEGAL_INST(line) fprintf(stderr, "ERROR: Illegal instruction on line %d", line); exit(7);
 #define STR_LEN 512
+
+#define STACK_OVER() fprintf(stdout, "WARNING: stack overflow reached, but execution is not halted\n"); 
+
+#define STACK_UNDER() fprintf(stdout, "WARNING: stack underflow reached, but execution is not halted\n");
+
+#define OUT_OF_PROGRAMM() fprintf(stderr, "Programm counter is try to read out of programm lenght");  
 
 // instruction enum for parsing and instruction check
 
@@ -49,6 +57,8 @@ typedef enum{
   JMP,
   JNZ,
   JPO,
+  JSR,
+  RTS,
   CMP,
   CMP_ADR,
   JEQ,
@@ -79,7 +89,8 @@ typedef struct{
   char*string_ptr;
   int buffer_tracker;
   int input_tracker_read;
-int input_tracker_write;
+  int input_tracker_write;
+  int stack_address_pointer;
   vm_constant_type constant_type;
   int arg_0;
   int arg_1;
@@ -114,6 +125,9 @@ void jaat_sbc(int arg_0, int arg_1, bool address_op);
 void jaat_jmp(int arg_0);
 void jaat_jnz(int arg_0);
 void jaat_jpo(int arg_0);
+void jaat_jsr(int arg_0);
+void jaat_rts();
+
 void jaat_cmp(int arg_0,int arg_1, bool address_op);
 void jaat_jeq(int arg_0);
 void jaat_nxt(void);
@@ -138,6 +152,9 @@ void jaat_scn(void);
 #define JMP(arg_0)             jaat_jmp(arg_0);        // jmp function:  jump to a specific point in programm
 #define JNZ(arg_0)             jaat_jnz(arg_0);        // jnz funciont:  jump if the alu result is not 0
 #define JEQ(arg_0)             jaat_jeq(arg_0);        // jeq funciont:  jump if zero is set
+#define JSR(arg_0)             jaat_jsr(arg_0);        // jsr function: jump into subroutine
+#define RTS()                  jaat_rts();             // rts function: return from subroutine
+
 #define CMP(arg_0, arg_1, flag)      jaat_cmp(arg_0, arg_1, flag); // cmp function:  compare arg_0 stack location with arg_1
 #define JPO(arg_0)             jaat_jpo(arg_0);        // jpo function:  jump if the alu overflow frlag is set
 #define PRT(arg_0)             jaat_prt(arg_0);        // prt print function: print content inside the provided location
@@ -179,7 +196,9 @@ void parse_instruction(){
   bool is_constant = false;
   int buffer_index = 0;
   bool halt_exist = false;
+  bool skip;
   for(int i=0;i< prg->programm_lenght;i++){
+    skip = false;
     string = false;
     is_constant = false;
     arg_0 = 0;
@@ -222,8 +241,14 @@ void parse_instruction(){
       type = DEC;
     }else if(strcmp(inst, "SCN") == 0){
       type = SCN;
+    }else if(strcmp(inst, "JSR") == 0){
+      type = JSR;
+    }else if(strcmp(inst, "RTS") == 0){
+      type = RTS;
+    }else if(inst[0] == 47 && inst[1] == 47){
+      skip = true;
     }else{
-      fprintf(stderr, "ERROR: no such instruction to parse\n");
+      fprintf(stderr, "ERROR: no such instruction to parse, failed on line %d\n", i+1);
       exit(3);
     }
     
@@ -231,14 +256,14 @@ void parse_instruction(){
     bool end = false;
     
     // find the starting point for parsing the arguments
-    for(start_point = 0; start_point < WORD_LEN && !end ;start_point++){
+    for(start_point = 0; start_point < WORD_LEN && !end && !skip ;start_point++){
       if(prg->inst_array[i][start_point] == 40){
         end = true;
       }
     }
 
     // check for full address variation
-    if(prg->inst_array[i][start_point-2] == 35){
+    if((prg->inst_array[i][start_point-2] == 35) && !skip){
       switch(type){
         case ADC:
           type = ADC_ADR;
@@ -250,28 +275,26 @@ void parse_instruction(){
           type = CMP_ADR;
           break;
         default:
-          fprintf(stderr, "ERROR: Illegal instruction\n");
-          exit(7);
+          ILLEGAL_INST(i+1);
           break;
       } 
     }
 
     // check for string variation
-    if(prg->inst_array[i][start_point] == 34 || prg->inst_array[i][start_point] == 39){
+    if((prg->inst_array[i][start_point] == 34 || prg->inst_array[i][start_point] == 39) && !skip){
       switch(type) {
         case PRT:
           type = PRT_STRING;
           break;
         default:
-          fprintf(stderr, "ERROR: Illegal instruction\n");
-          exit(7);
+          ILLEGAL_INST(i+1);
           break;
       }
       string = true;
     }
 
     // check for constant variation
-    if(isupper(prg->inst_array[i][start_point]) > 0){
+    if((isupper(prg->inst_array[i][start_point]) > 0) && !skip){
       switch(type){
         case PRT:
           type = PRT_CONSTANT;
@@ -280,8 +303,7 @@ void parse_instruction(){
           type = PUT_CONSTANT;
           break;
         default:
-          fprintf(stderr, "ERROR: Illegal instruction\n");
-          exit(7);
+          ILLEGAL_INST(i+1);
           break;
       }
       is_constant = true;
@@ -293,7 +315,7 @@ void parse_instruction(){
     char* str = 0;
 
     // check for default parameter arg_0,arg_1
-    while(!end && ptr < WORD_LEN-start_point && string == false && is_constant == false){
+    while(!end && ptr < WORD_LEN-start_point && string == false && is_constant == false && !skip){
       if(prg->inst_array[i][start_point+ptr] == 41){
         end = true;
       }else if(prg->inst_array[i][start_point+ptr] != 32 && prg->inst_array[i][start_point+ptr] != 44){
@@ -309,7 +331,7 @@ void parse_instruction(){
     }
 
     // check for lenght of string
-    while(!end && current_str_len < STR_LEN && string == true && is_constant == false){
+    while(!end && current_str_len < STR_LEN && string == true && is_constant == false && !skip){
       if(prg->inst_array[i][start_point+ptr] == 41){
         end = true;
       }else {
@@ -319,7 +341,7 @@ void parse_instruction(){
     }
 
     // check for lenght of constant
-    while(!end && current_str_len < STR_LEN && is_constant == true && string == false){
+    while(!end && current_str_len < STR_LEN && is_constant == true && string == false && !skip){
      if(prg->inst_array[i][start_point+ptr] == 41){
         end = true;
       }else {
@@ -329,7 +351,7 @@ void parse_instruction(){
     }
     
     // check for string alignment 
-    if(string){
+    if(string && !skip){
       str = (char*)malloc(sizeof(char)*current_str_len-2);
       memcpy(str, &prg->inst_array[i][start_point+1],sizeof(char)*current_str_len-2);
       str[current_str_len-2] = 0;
@@ -338,7 +360,7 @@ void parse_instruction(){
     }
 
     // check for constant alignment 
-    if(is_constant){
+    if(is_constant && !skip){
       char* word = (char*)malloc(sizeof(char)*current_str_len);
       memcpy(word, &prg->inst_array[i][start_point], sizeof(char)*current_str_len);
       word[current_str_len] = 0;
@@ -346,26 +368,29 @@ void parse_instruction(){
         constant_type_buffer[buffer_index] = INPUT;
         buffer_index += 1;
       }else{
-        fprintf(stderr, "No such constant to parse\n");
+        ILLEGAL_INST(i+1); 
         exit(8);
       }
       free(word);
       word = 0;
     }
     // put instruction and default parameter into instruction_pool
-    instruction_pool[pool_index] = type;
-    instruction_pool[pool_index+1] = arg_0;
-    instruction_pool[pool_index+2] = arg_1;
+    if(!skip){
+      instruction_pool[pool_index] = type;
+      instruction_pool[pool_index+1] = arg_0;
+      instruction_pool[pool_index+2] = arg_1;
+      pool_index += 3;
+    }
+
 
     // debug flag
 
-    if(DEBUG){
+    if(DEBUG && !skip){
       printf("instruction type: %d\n", instruction_pool[pool_index]);
       printf("arg_0: %d\n", instruction_pool[pool_index+1]);
       printf("arg_1: %d\n\n", instruction_pool[pool_index+2]);
     }
     
-    pool_index += 3;
 
     if(pool_index >= pool_size*3){
       fprintf(stderr, "Too much instruction, pool overflow"); 
@@ -492,6 +517,12 @@ void jaat_exec(){
     case JEQ:
         JEQ(JAAT.arg_0);
         break;
+    case JSR:
+        JSR(JAAT.arg_0);
+        break;
+    case RTS:
+        jaat_rts();
+        break;
     case CMP:
         CMP(JAAT.arg_0,JAAT.arg_1,false);
         break;
@@ -524,8 +555,8 @@ void jaat_exec(){
         break;
     default:
       NO_IMPLEMENTATION();
-      fwrite("No such instruction please check your code!", 43,1, stderr);
-      exit(1);
+      fprintf(stderr, "ERROR: Try to load an illegal instruction\n");
+      exit(5);
   }
   return;
 }
@@ -565,7 +596,7 @@ void jaat_put(int arg_0){
   JAAT.current_pointer += 1;
 
   if(JAAT.current_pointer > STACK_LENGHT){
-    fprintf(stdout, "WARNING: stack overflow reached, but execution is not halted\n");
+    STACK_OVER();
     JAAT.current_pointer += 1;
   }
 }
@@ -575,7 +606,7 @@ void jaat_pop(void){
   JAAT.current_pointer -= 1;
   JAAT.accumulator = JAAT.stack[JAAT.current_pointer];
   if(JAAT.current_pointer < 0){
-    fprintf(stdout, "WARNING: stack underflow reached, but execution is not halted\n");
+    STACK_UNDER();
     JAAT.current_pointer = 0;
   } 
 }
@@ -583,11 +614,11 @@ void jaat_pop(void){
 void jaat_adc(int arg_0, int arg_1, bool address_op){
   if(DEBUG) printf("ADC\n");
   if(arg_0 < 0 && arg_0 > STACK_LENGHT){
-    fprintf(stdout, "WARNING: stack out of bounds for arg_0");
+    STACK_OVER();
     return;
   }
   if(arg_1 < 0 && arg_1 > STACK_LENGHT && address_op){
-    fprintf(stdout, "WARNING: stack out of bounds for arg_1");
+    STACK_OVER();
     return;
   }
 
@@ -610,11 +641,11 @@ void jaat_adc(int arg_0, int arg_1, bool address_op){
 void jaat_sbc(int arg_0, int arg_1, bool address_op){
   if(DEBUG) printf("SBC\n");
   if(arg_0 < 0 && arg_0 > STACK_LENGHT){
-    fprintf(stdout, "WARNING: stack out of bounds for arg_0");
+    STACK_OVER();
     return;
   }
   if(arg_1 < 0 && arg_1 > STACK_LENGHT && address_op){
-    fprintf(stdout, "WARNING: stack out of bounds for arg_1");
+    STACK_OVER();
     return;
   }
   STACK_TYPES res = 0;
@@ -637,7 +668,7 @@ void jaat_jmp(int arg_0){
   if(DEBUG) printf("JMP\n");
   if(arg_0 > prg->programm_lenght || arg_0 < 0){
     JAAT.halt = true;
-    fprintf(stderr, "Programm counter is try to read out of programm lenght");
+    OUT_OF_PROGRAMM();
     return;
   }
   JAAT.programm_counter = (arg_0*3) - 3;
@@ -648,7 +679,7 @@ void jaat_jnz(int arg_0){
   if(JAAT.zero == false){
     if(arg_0 > prg->programm_lenght || arg_0 < 0){
       JAAT.halt = true;
-      fprintf(stderr, "Programm counter is try to read out of programm lenght");
+      OUT_OF_PROGRAMM();
     }
     JAAT.programm_counter = (arg_0*3) - 3;
   }
@@ -661,7 +692,7 @@ void jaat_jpo(int arg_0){
   if(JAAT.overflow == true){
     if(arg_0 > prg->programm_lenght || arg_0 < 0){
       JAAT.halt = true;
-      fprintf(stderr, "Programm counter is try to read out of programm lenght");
+      OUT_OF_PROGRAMM();
     }
     JAAT.programm_counter = (arg_0*3) - 3;
   }
@@ -707,7 +738,7 @@ void jaat_jeq(int arg_0){
   if(JAAT.zero == true){
     if(arg_0 > prg->programm_lenght || arg_0 < 0){
       JAAT.halt = true;
-      fprintf(stderr, "Programm counter is try to read out of programm lenght");
+      OUT_OF_PROGRAMM();
     }
     JAAT.programm_counter = (arg_0*3)-3;
   }
@@ -717,7 +748,7 @@ void jaat_nxt(void){
   if(DEBUG) printf("NXT\n");
   JAAT.current_pointer += 1;
   if(JAAT.current_pointer > STACK_LENGHT){
-    printf("WARNING: stack overflow using manual increment\n");
+    STACK_OVER();
     JAAT.current_pointer = 0;
   }
 }
@@ -726,7 +757,7 @@ void jaat_prv(void){
   if(DEBUG) printf("PRV\n");
   JAAT.current_pointer -=1;
   if(JAAT.current_pointer < 0){
-    printf("WARNING: stack underflow using manual decrement\n");
+    STACK_UNDER();
     JAAT.current_pointer  = STACK_LENGHT;
   }
 }
@@ -831,6 +862,27 @@ void jaat_put_constant(){
       NO_IMPLEMENTATION();
       break;
   }
+}
+
+void jaat_jsr(int arg_0){
+  if(DEBUG) printf("JSR\n");
+  if(arg_0 >= 0 && arg_0 < STACK_LENGHT){
+    JAAT.stack[JAAT.stack_address_pointer + STACK_LENGHT-256] = JAAT.programm_counter;
+    JAAT.stack_address_pointer += 1;
+    if(JAAT.stack_address_pointer >= STACK_LENGHT){
+      JAAT.stack_address_pointer = 0;
+    }
+    JAAT.programm_counter = arg_0*3;
+  }
+}
+
+void jaat_rts(){
+  if(DEBUG) printf("RTS\n");
+  JAAT.stack_address_pointer -= 1;
+  if(JAAT.stack_address_pointer < STACK_LENGHT-256){
+    JAAT.stack_address_pointer = 256;
+  }
+  JAAT.programm_counter = JAAT.stack[JAAT.stack_address_pointer + STACK_LENGHT-256];
 }
 
 #endif

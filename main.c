@@ -37,7 +37,8 @@ void list_message(){
   array_push(list, "PRT('JNZ: same as jump but only if the result of the previous operation IS NOT ZERO\n')");
   array_push(list, "PRT('JPO: same as jump but only if the result of the previous operation return an OVERFLOW\n')");
   array_push(list, "PRT('JEQ: same as jump but if the result of a comparison return an equal state, aka zero flag is setted\n')");
-
+  array_push(list, "PRT('JSR: jump to subroutine and save return address in the last 256 location in stack\n')");  
+  array_push(list, "PRT('RTS: return from subroutine by set the programm counter to the saved address of jsr\n')");
   array_push(list, "PRT('CMP: compare two element, first argument is used to get info from the stack, the second is used to set the compare number. You can use the # variation to use both element as address \n')");
   array_push(list, "PRT('NXT and PRV: use to increment or decrement MANUALLY the stack pointer\n')");
   array_push(list, "PRT('PRT: print thing on stdout using the first argument that can be a location in the stack, a costant like INPUT to print out the keyboard bufer, or a direct string\n')");
@@ -45,6 +46,7 @@ void list_message(){
   array_push(list, "PRT('DEC: same as INC but it subtract 1 from the number in stack\n')");
   array_push(list, "PRT('SCN: scan keyboard input and put it in the machine circular buffer\n\n')");
   array_push(list, "PRT('for reference, even this untility is written in the vm language and executed by the vm itself\n\n')");
+  array_push(list, "PRT('You can add comment inside your code by start a line with //, this tell the parser to not analize this line and go for the next one\n')")
   array_push(list,"PRT('============================================\n\n')");
   array_push(list, "HLT()");
   launch_vm(list);
