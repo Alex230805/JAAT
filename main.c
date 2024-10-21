@@ -169,7 +169,7 @@ int main(int argc, char** argv){
             buffer_t = (char*)malloc(sizeof(char)*255);
             state = fgets(buffer_t, 255, programm);
             // check for special chars in string like \n or \t
-            if(buffer_t[0] != 10 && (buffer_t[0] != 47 && buffer_t[1] != 47 && state != NULL)){
+            if(buffer_t[0] != 10 && (buffer_t[0] != 47 && buffer_t[1] != 47 && state != NULL)){ 
               char new_buffer[255];
               for(int i=0;i<255 && buffer_t[i] != 0; i++){
 
@@ -187,8 +187,13 @@ int main(int argc, char** argv){
               }
             
               char* len = (char*)memchr(buffer_t, ')', strlen(buffer_t));
+              char* name_space = (char*)memchr(buffer_t, '!', strlen(buffer_t));
               if(len != NULL){
                 buffer_t[len-buffer_t+1] = 0;
+                array_push(custom_programm, buffer_t);
+              }
+              if(name_space != NULL){
+                buffer_t[strlen(buffer_t)-1] = 0;
                 array_push(custom_programm, buffer_t);
               }
             }

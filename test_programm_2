@@ -1,15 +1,15 @@
 // main function
 
-
-PUT(0)
-PUT(0)
-PRT('Test programm, for loop with 20 iteration and subroutine\n')
-JSR(5)
-HLT()
+PUT(0)  // put 0 in the stack
+PUT(0)  // put 0 in the stack
+PRT('Test programm, for loop with 20 iteration and subroutine\n') // print stuff
+JSR(SUBROUTINE)  // jump to subroutine
+HLT()   // end programm
 
 
 //this is a comment, down here there is the subroutine
 
+!SUBROUTINE
 
 ADC#(1,0)   // add stack[0] with stack[1]
 PRT(1)      // print it out
