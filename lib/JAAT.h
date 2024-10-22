@@ -54,7 +54,9 @@
  *  5 - create the function related to the instruction
  *  6 - define the instruction macro
  *  7 - use the macro in the jaat_loo() in a case inside the switch case
- *  
+ *  8 - if you have created an instruction with variation string or constant, you need to update the
+ *      jaat_load() function, specifically the switch case.
+ *
  * */
 
 
