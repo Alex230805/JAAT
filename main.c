@@ -92,44 +92,24 @@ void jaat_ex_1(){
   launch_vm(prg);
 }
 
+
 void jaat_ex_2(){
-  // fibonacci sequence
+// fibonacci sequence but with a for loop
   Array* prg2;
   array_new(prg2);
-  array_push(prg2, "PRT('fibonacci sequence\n')");
+  array_push(prg2, "PRT('fibonacci sequence, but with for loop locked on 17\n')");
   array_push(prg2, "PUT(1)");
   array_push(prg2, "PUT(1)");
+  array_push(prg2, "PUT(0)");
   array_push(prg2, "ADC#(0,1)");
   array_push(prg2, "SWP(0,1)");
+  array_push(prg2, "INC(2)");
+  array_push(prg2, "CMP(2, 17)");
+  array_push(prg2, "JNZ(3)");
   array_push(prg2, "PRT(1)");
-  array_push(prg2, "CMP(1, 46368)");
-  array_push(prg2, "JEQ(9)");
-  array_push(prg2, "JMP(3)");
   array_push(prg2, "HLT()");
-  char*buffer;
-  array_get(prg2, 0, buffer);
-  printf("%s\n\n",buffer);
+
   launch_vm(prg2);
-
-}
-
-void jaat_ex_3(){
-// fibonacci sequence but with a for loop
-  Array* prg3;
-  array_new(prg3);
-  array_push(prg3, "PRT('fibonacci sequence, but with for loop locked on 17\n')");
-  array_push(prg3, "PUT(1)");
-  array_push(prg3, "PUT(1)");
-  array_push(prg3, "PUT(0)");
-  array_push(prg3, "ADC#(0,1)");
-  array_push(prg3, "SWP(0,1)");
-  array_push(prg3, "INC(2)");
-  array_push(prg3, "CMP(2, 17)");
-  array_push(prg3, "JNZ(3)");
-  array_push(prg3, "PRT(1)");
-  array_push(prg3, "HLT()");
-
-  launch_vm(prg3);
 
 }
 
@@ -210,8 +190,6 @@ int main(int argc, char** argv){
         }else if(strcmp(argv[i+1], "2") == 0){
           jaat_ex_2();
         }else if(strcmp(argv[i+1], "3") == 0){
-          jaat_ex_3();
-        }else if(strcmp(argv[i+1], "4") == 0){
           jaat_ex_4();
         }else fprintf(stderr,"ERROR: missing argument");
       }

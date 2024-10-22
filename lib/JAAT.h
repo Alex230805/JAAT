@@ -29,7 +29,7 @@
 #define STACK_LENGHT 1024
 #define BYTE_LENGHT u16t
 #define WORD_LEN 512
-#define DEBUG true 
+#define DEBUG false 
 #define NAME_SPACE_LENGHT 256
 #define MACHINE_STATE false
 #define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
@@ -42,6 +42,22 @@
 #define STACK_UNDER() fprintf(stdout, "[SYSTEM]: WARNING: stack underflow reached, but execution is not halted\n");
 
 #define OUT_OF_PROGRAMM() fprintf(stderr, "[SYSTEM]: Programm counter is try to read out of programm lenght");  
+
+
+/*
+ *  STEP TO ADD AN INSTRUCTION
+ *
+ *  1 - declare it in the vm_instruction list
+ *  2 - decide the type (a normal one, a string or a constant one)
+ *  3 - update the parser in the instruction identification part
+ *  4 - update the parser in the selected parser section ( for string or constant)
+ *  5 - create the function related to the instruction
+ *  6 - define the instruction macro
+ *  7 - use the macro in the jaat_loo() in a case inside the switch case
+ *  
+ * */
+
+
 
 // instruction enum for parsing and instruction check
 
@@ -90,15 +106,21 @@ typedef struct{
 typedef struct{
   int programm_counter;
   int current_pointer;
+
   STACK_TYPES stack[STACK_LENGHT];
   vm_inst current_instruction;
   STACK_TYPES accumulator;
+
   char*string_ptr;
-  int buffer_tracker;
+  int const_tracker;
+  int string_tracker;
+  
   int input_tracker_read;
   int input_tracker_write;
+  
   int stack_address_pointer;
   vm_constant_type constant_type;
+  
   int arg_0;
   int arg_1;
   bool negative;
@@ -196,12 +218,13 @@ vm_programm* prg;
 #include "JAAT.h"
 
 void parse_preprocessor(){
+  int fn_index = 0;
   if(DEBUG) printf("[PARSER PREPROCESSOR]: Starting preprocessing, checking for name space definition\n");
   for(int i=0;i<prg->programm_lenght;i++){
     if(prg->inst_array[i][0] =='!'){
       if(DEBUG) printf("[PARSER PREPROCESSOR]: name space parser triggered\n");
       // save name_space
-      int fn_index = i;
+      fn_index = i-fn_name_space_ptr;
       fn_name_space[fn_name_space_ptr] = (Box){fn_index, prg->inst_array[i]};
       if(DEBUG) printf("[PARSER PREPROCESSOR]: name space found at %d: %s\n", i,fn_name_space[fn_name_space_ptr].name_space);
       fn_name_space_ptr+=1;
@@ -215,22 +238,27 @@ void parse_preprocessor(){
 void parse_instruction(){
   if(DEBUG) printf("[PARSER]: start instruction parser\n");
   vm_inst type = -1;
+  
   int pool_index = 0;
   int arg_0, arg_1;
   char inst[3]; 
-  bool string;
+  int string_index = 0;
+  int const_index = 0;
+
+
   bool is_constant = false;
-  int buffer_index = 0;
+  bool string;
   bool halt_exist = false;
   bool name_space_found = false;
   bool skip = false;
   bool fun_reference = false;
+
   for(int i=0;i< prg->programm_lenght;i++){
+    fun_reference = false;
     skip = false;
     name_space_found = false;
     string = false;
     is_constant = false;
-    fun_reference = false;
     arg_0 = 0;
     arg_1 = 0;
     memcpy(inst,prg->inst_array[i], sizeof(char)*3);
@@ -286,7 +314,7 @@ void parse_instruction(){
     bool end = false;
     
     // find the starting point for parsing the arguments
-    for(start_point = 0; start_point < WORD_LEN && !end && !name_space_found && !skip;start_point++){
+    for(start_point = 0; start_point < WORD_LEN && !end && !name_space_found && !skip && !fun_reference ;start_point++){
       if(prg->inst_array[i][start_point] == 40){
         end = true;
       }
@@ -326,13 +354,15 @@ void parse_instruction(){
     }
 
     // check for constant variation and name space reference
-    if((isupper(prg->inst_array[i][start_point]) > 0) &&  !name_space_found && !skip){
+    if((isupper(prg->inst_array[i][start_point]) > 0) &&  !name_space_found && !skip && !fun_reference){
       if(DEBUG) printf("[PARSER]: Parsing constant variation\n");
       switch(type){
         case PRT:
+          is_constant = true;
           type = PRT_CONSTANT;
           break;
         case PUT:
+          is_constant = true;
           type = PUT_CONSTANT;
           break;
         default:
@@ -340,11 +370,9 @@ void parse_instruction(){
           if(arg_0 == -1){
             ILLEGAL_INST(i+1);
           }
-          skip = true;
           fun_reference = true;
           break;
       }
-      is_constant = true;
     }
 
     end = false;
@@ -354,7 +382,7 @@ void parse_instruction(){
     char* str = 0;
 
     // check for default parameter arg_0,arg_1
-    while(!end && ptr < WORD_LEN-start_point && string == false && is_constant == false && !name_space_found && !skip){
+    while(!end && ptr < WORD_LEN-start_point && string == false && is_constant == false && !name_space_found && !skip && !fun_reference){
       if(prg->inst_array[i][start_point+ptr] == 41 && prg->inst_array[i][start_point+ptr+1] == 0){
         end = true;
       }else if(prg->inst_array[i][start_point+ptr] != 32 && prg->inst_array[i][start_point+ptr] != 44){
@@ -371,7 +399,7 @@ void parse_instruction(){
 
     // check for lenght of string
     end = false;
-    while(!end && current_str_len < STR_LEN && string == true && is_constant == false && !name_space_found && !skip){
+    while(!end && current_str_len < STR_LEN && string == true && is_constant == false && !name_space_found && !skip && !fun_reference ){
       if(prg->inst_array[i][start_point+ptr] == 41 && prg->inst_array[i][start_point+ptr+1] == 0){
         end = true;
       }else {
@@ -382,7 +410,7 @@ void parse_instruction(){
 
     // check for lenght of constant
     end = false;
-    while(!end && current_str_len < STR_LEN && is_constant == true && string == false && !name_space_found && !skip){
+    while(!end && current_str_len < STR_LEN && is_constant == true && string == false && !name_space_found && !skip && !fun_reference ){
      if(prg->inst_array[i][start_point+ptr] == 41 && prg->inst_array[i][start_point+ptr+1] == 0){
         end = true;
       }else {
@@ -392,22 +420,22 @@ void parse_instruction(){
     }
     
     // check for string alignment 
-    if(string && !name_space_found && !skip){
+    if(string && !name_space_found && !skip && !fun_reference ){
       str = (char*)malloc(sizeof(char)*current_str_len-2);
       memcpy(str, &prg->inst_array[i][start_point+1],sizeof(char)*current_str_len-2);
       str[current_str_len-2] = 0;
-      string_buffer[buffer_index] = str;
-      buffer_index+=1;
+      string_buffer[string_index] = str;
+      string_index+=1;
     }
 
     // check for constant alignment 
-    if(is_constant && !name_space_found && !skip){
+    if(is_constant && !name_space_found && !skip && !fun_reference){
       char* word = (char*)malloc(sizeof(char)*current_str_len);
       memcpy(word, &prg->inst_array[i][start_point], sizeof(char)*current_str_len);
       word[current_str_len] = 0;
       if(strcmp(word, "INPUT") == 0){
-        constant_type_buffer[buffer_index] = INPUT;
-        buffer_index += 1;
+        constant_type_buffer[const_index] = INPUT;
+        const_index += 1;
       }else{
         ILLEGAL_INST(i+1); 
         exit(8);
@@ -416,10 +444,11 @@ void parse_instruction(){
       word = 0;
     }
     // put instruction and default parameter into instruction_pool
-    if(!skip || fun_reference){
+    if(!skip){
       instruction_pool[pool_index] = type;
       instruction_pool[pool_index+1] = arg_0;
       instruction_pool[pool_index+2] = arg_1;
+      if(DEBUG) printf("[SYSTEM PROGRAMM]: instruction: %s : (%d,%d)\n", inst,arg_0,arg_1);
       pool_index += 3;
     }
 
@@ -570,7 +599,6 @@ void jaat_loop(){
         scanf("%c", &input);
       } 
       JAAT.programm_counter += 3;
-      JAAT.buffer_tracker += 1;
       if(JAAT.programm_counter > prg->programm_lenght*3){
         JAAT.programm_counter = 0;
       }
@@ -594,11 +622,23 @@ void jaat_load(vm_inst instruction, int arg_0,int arg_1){
   JAAT.current_instruction = instruction;
   JAAT.arg_0 = arg_0;
   JAAT.arg_1 = arg_1;
-  if(string_buffer[JAAT.buffer_tracker] != NULL){
-    JAAT.string_ptr = string_buffer[JAAT.buffer_tracker];
-  }
-  if(constant_type_buffer[JAAT.buffer_tracker] != 0){
-    JAAT.constant_type = constant_type_buffer[JAAT.buffer_tracker];  
+  switch(instruction){
+    case PRT_STRING:
+      if(string_buffer[JAAT.string_tracker] != NULL){
+        JAAT.string_ptr = string_buffer[JAAT.string_tracker];
+        JAAT.string_tracker += 1;
+      }
+      break;
+
+    case PRT_CONSTANT:
+    case PUT_CONSTANT:
+      if(constant_type_buffer[JAAT.const_tracker] != 0){
+        JAAT.constant_type = constant_type_buffer[JAAT.const_tracker];  
+        JAAT.const_tracker += 1;
+      }
+      break;
+    default:
+      break;
   }
 }
 
@@ -741,7 +781,8 @@ void jaat_load_programm(Array *new_prg){
   JAAT.halt = false;
   JAAT.accumulator = 0;
   JAAT.current_pointer = 0;
-  JAAT.buffer_tracker = 0;
+  JAAT.string_tracker = 0;
+  JAAT.const_tracker = 0;
   JAAT.input_tracker_read = 0;
   JAAT.input_tracker_write = 0;
   parse_preprocessor();
@@ -1018,14 +1059,13 @@ void jaat_put_constant(){
   }
 }
 
-// note: check this function
 
 
 void jaat_jsr(int arg_0){
   if(arg_0 >= 0 && arg_0 < STACK_LENGHT){
     JAAT.stack[JAAT.stack_address_pointer + STACK_LENGHT-256] = JAAT.programm_counter;
     JAAT.stack_address_pointer += 1;
-    if(JAAT.stack_address_pointer >= STACK_LENGHT){
+    if(JAAT.stack_address_pointer >= 256){
       JAAT.stack_address_pointer = 0;
     }
     JAAT.programm_counter = (arg_0*3) - 3;
@@ -1034,7 +1074,7 @@ void jaat_jsr(int arg_0){
 
 void jaat_rts(){
   JAAT.stack_address_pointer -= 1;
-  if(JAAT.stack_address_pointer < STACK_LENGHT-256){
+  if(JAAT.stack_address_pointer  < 0){
     JAAT.stack_address_pointer = 256;
   }
   JAAT.programm_counter = JAAT.stack[JAAT.stack_address_pointer + STACK_LENGHT-256];
