@@ -1,13 +1,12 @@
-// main function
+// note: by now there is a bug with the instruction JSR
+
 
 PUT(0)  // put 0 in the stack
 PUT(0)  // put 0 in the stack
 PRT('Test programm, for loop with 20 iteration and subroutine\n') // print stuff
 JSR(SUBROUTINE)  // jump to subroutine
+PRT('End routine')
 HLT()   // end programm
-
-
-//this is a comment, down here there is the subroutine
 
 !SUBROUTINE
 
@@ -17,4 +16,14 @@ ADC(0,1)    // add accumulator with 1 and put it in stack[0]
 CMP(1, 20)  // compare stack[1] with 20
 JNZ(5)      // if are not equal return to line 5
 RTS()       // return from subroutine
+
+!SUBR
+
+ADC#(1,0)   // add stack[0] with stack[1]
+PRT(1)      // print it out
+ADC(0,2)    // add accumulator with 1 and put it in stack[0]
+CMP(1, 20)  // compare stack[1] with 20
+JNZ(SUBR)      // if are not equal return to line 5
+RTS()       // return from subroutine
+
 

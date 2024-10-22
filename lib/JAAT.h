@@ -29,7 +29,7 @@
 #define STACK_LENGHT 1024
 #define BYTE_LENGHT u16t
 #define WORD_LEN 512
-#define DEBUG false
+#define DEBUG true 
 #define NAME_SPACE_LENGHT 256
 #define MACHINE_STATE false
 #define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
@@ -201,7 +201,7 @@ void parse_preprocessor(){
     if(prg->inst_array[i][0] =='!'){
       if(DEBUG) printf("[PARSER PREPROCESSOR]: name space parser triggered\n");
       // save name_space
-      int fn_index = i+1;
+      int fn_index = i;
       fn_name_space[fn_name_space_ptr] = (Box){fn_index, prg->inst_array[i]};
       if(DEBUG) printf("[PARSER PREPROCESSOR]: name space found at %d: %s\n", i,fn_name_space[fn_name_space_ptr].name_space);
       fn_name_space_ptr+=1;
@@ -214,7 +214,7 @@ void parse_preprocessor(){
 
 void parse_instruction(){
   if(DEBUG) printf("[PARSER]: start instruction parser\n");
-  vm_inst type;
+  vm_inst type = -1;
   int pool_index = 0;
   int arg_0, arg_1;
   char inst[3]; 
@@ -224,11 +224,13 @@ void parse_instruction(){
   bool halt_exist = false;
   bool name_space_found = false;
   bool skip = false;
+  bool fun_reference = false;
   for(int i=0;i< prg->programm_lenght;i++){
     skip = false;
     name_space_found = false;
     string = false;
     is_constant = false;
+    fun_reference = false;
     arg_0 = 0;
     arg_1 = 0;
     memcpy(inst,prg->inst_array[i], sizeof(char)*3);
@@ -324,7 +326,6 @@ void parse_instruction(){
     }
 
     // check for constant variation and name space reference
-    bool fun_reference = false;
     if((isupper(prg->inst_array[i][start_point]) > 0) &&  !name_space_found && !skip){
       if(DEBUG) printf("[PARSER]: Parsing constant variation\n");
       switch(type){
@@ -454,7 +455,7 @@ int parser_check_for_namespace(vm_inst inst, char* line){
       for(i=0;i<fn_name_space_ptr;i++){
         if(strcmp(local_name_space, &fn_name_space[i].name_space[1]) == 0){
           if(DEBUG) printf("[PARSER]: Namespace %s reference function in line %d\n", fn_name_space[i].name_space, fn_name_space[i].index);
-          arg_0 = fn_name_space[i].index+1;
+          arg_0 = fn_name_space[i].index;
         }
       }
       break; 
@@ -467,6 +468,7 @@ int parser_check_for_namespace(vm_inst inst, char* line){
 
 
 void jaat_loop(){
+  char input;
   if(DEBUG) printf("[LOOP]: starting loop\n");
   if(JAAT.programm_counter > pool_size){
     fprintf(stderr, "Programm counter not initialized");
@@ -476,15 +478,103 @@ void jaat_loop(){
     if(JAAT.current_pointer <= STACK_LENGHT){
       
       BYTE_LENGHT inst = instruction_pool[JAAT.programm_counter];
+      if(DEBUG){
+        printf("[LOOP]: current programm counter: %d\n",JAAT.programm_counter);        
+        printf("[LOOP]: current instruction loaded: ");
+        switch(instruction_pool[JAAT.programm_counter]){
+          case HLT:
+              printf("HLT\n");
+              break;
+          case PUT:
+              printf("PUT\n");
+              break; 
+          case PUT_CONSTANT:
+              printf("PUT_CONSTANT\n");
+              break; 
+          case POP:
+              printf("POP\n");
+              break; 
+          case GET:
+              printf("GET\n");
+              break; 
+          case ADC:
+              printf("ADC\n");
+              break; 
+          case ADC_ADR:
+              printf("ADC_ADR\n");
+              break; 
+          case SBC:
+              printf("SBC\n");
+              break; 
+          case SBC_ADR:
+              printf("SBC_ADR\n");
+              break; 
+          case JMP:
+              printf("JMP\n");
+              break; 
+          case JNZ:
+              printf("JNZ\n");
+              break; 
+          case JPO:
+              printf("JPO\n");
+              break; 
+          case JSR:
+              printf("JSR\n");
+              break; 
+          case JEQ:
+              printf("JEQ\n");
+              break; 
+          case RTS:
+              printf("RTS\n");
+              break; 
+          case CMP:
+              printf("CMP\n");
+              break; 
+          case CMP_ADR:
+              printf("CMP_ADR\n");
+              break; 
+          case NXT:
+              printf("NXT\n");
+              break; 
+          case PRV:
+              printf("PRV\n");
+              break; 
+          case SWP:
+              printf("SWP\n");
+              break; 
+          case PRT:
+              printf("PRT\n");
+              break; 
+          case PRT_STRING:
+              printf("PRT_STRING\n");
+              break; 
+          case PRT_CONSTANT:
+              printf("PRT_CONSTANT\n");
+              break; 
+          case INC:
+              printf("INC\n");
+              break; 
+          case DEC:
+              printf("DEC\n");
+              break; 
+          case SCN:
+              printf("SCN\n");
+              break;  
+        }
+      } 
       int arg_0 = (int) instruction_pool[JAAT.programm_counter+1]; 
       int arg_1 = (int) instruction_pool[JAAT.programm_counter+2];
       jaat_load(inst,arg_0, arg_1);
       jaat_exec();
+      if(DEBUG){
+        scanf("%c", &input);
+      } 
       JAAT.programm_counter += 3;
       JAAT.buffer_tracker += 1;
       if(JAAT.programm_counter > prg->programm_lenght*3){
         JAAT.programm_counter = 0;
       }
+      if(DEBUG) printf("\n\n");
     } else {
       fprintf(stderr, "Stack overflow\n");
       exit(2);
@@ -928,6 +1018,9 @@ void jaat_put_constant(){
   }
 }
 
+// note: check this function
+
+
 void jaat_jsr(int arg_0){
   if(arg_0 >= 0 && arg_0 < STACK_LENGHT){
     JAAT.stack[JAAT.stack_address_pointer + STACK_LENGHT-256] = JAAT.programm_counter;
@@ -935,7 +1028,7 @@ void jaat_jsr(int arg_0){
     if(JAAT.stack_address_pointer >= STACK_LENGHT){
       JAAT.stack_address_pointer = 0;
     }
-    JAAT.programm_counter = arg_0*3;
+    JAAT.programm_counter = (arg_0*3) - 3;
   }
 }
 
