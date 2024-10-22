@@ -1,5 +1,3 @@
-// note: by now there is a bug with the instruction JSR
-
 
 PUT(0)  // put 0 in the stack
 PUT(0)  // put 0 in the stack
