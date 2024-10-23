@@ -31,7 +31,7 @@
 #define WORD_LEN 512
 #define DEBUG false 
 #define NAME_SPACE_LENGHT 256
-#define MACHINE_STATE true
+#define MACHINE_STATE false
 #define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
 
 #define ILLEGAL_INST(line, message) fprintf(stderr, "[PARSER]: ERROR: Illegal instruction on line %d: %s", line, message); exit(7);
@@ -56,12 +56,19 @@
  *  7 - use the macro in the jaat_loo() in a case inside the switch case
  *  8 - if you have created an instruction with variation string or constant, you need to update the
  *      jaat_load() function, specifically the switch case.
- *
  * */
 
+/*
 
+=======================================
 
-// instruction enum for parsing and instruction check
+JAAT INSTRUCTION LIST, CONSTANT 
+        LIST AND MAIN DATA STRUCTURE
+
+======================================
+
+*/ 
+
 
 typedef enum{
   HLT = 0,
@@ -103,12 +110,6 @@ typedef enum{
 }vm_constant_type;
 
 
-typedef struct{
-  int index;
-  char* name_space;
-}Box;
-
-// JAAT vm
 
 typedef struct{
   int programm_counter;
@@ -141,7 +142,24 @@ typedef struct{
   char** inst_array;
 }vm_programm;
 
-// main functions
+
+typedef struct{
+  int index;
+  char* name_space;
+}Box;
+
+
+/*
+
+=======================================
+
+JAAT MAIN FUNCTION
+
+======================================
+
+*/ 
+
+
 
 void jaat_loop(void);
 void jaat_load(vm_inst instruction, int arg_0,int arg_1);
@@ -152,6 +170,22 @@ void jaat_load_programm(Array *new_prg);
 void parse_instruction(void);
 int parser_check_for_namespace(vm_inst inst, char* line);
 void parse_preprocessor();
+
+
+/*
+
+=======================================
+
+JAAT FUNCTION USED FOR 
+  IMPLEMENT ALL INSTRUCTIONS, YOU CAN 
+  USE YOUR CUSTOM ONE, YOU NEED ONLY TO 
+  LINK IT WITH THE TAG DEFINITION BELOW
+
+======================================
+
+*/ 
+
+
 
 void jaat_hlt(void);
 void jaat_put(int arg_0);
@@ -167,7 +201,6 @@ void jaat_jnz(int arg_0);
 void jaat_jpo(int arg_0);
 void jaat_jsr(int arg_0);
 void jaat_rts();
-
 void jaat_cmp(int arg_0,int arg_1, bool address_op);
 void jaat_jeq(int arg_0);
 void jaat_nxt(void);
@@ -182,7 +215,19 @@ void jaat_dec_constant(void);
 void jaat_dec(int arg_0);
 void jaat_scn(void);
 
-// tag definition
+
+/*
+
+=======================================
+
+JAAT TAGS DEFINITION 
+    FOR EXECUTION REFERENCE
+
+======================================
+
+*/ 
+
+
 
 #define HLT()                  jaat_hlt();             // halt function: halt the execution
 #define PUT_CONSTANT()         jaat_put_constant();    // put function with constant: basically put but with special things 
@@ -214,6 +259,21 @@ void jaat_scn(void);
 #define SCN()                  jaat_scn();             // scn function: scan for keyboard input
 #define PRT_CONSTANT()          jaat_prt_constant();
 
+
+
+/*
+
+=======================================
+
+JAAT STATIC VARIABLE AND 
+            BUFFER POINTERS
+
+======================================
+
+*/ 
+
+
+
 int input_buffer_size = 255;
 int pool_size = 1024;
 vm JAAT = {0};
@@ -232,6 +292,60 @@ vm_programm* prg;
 #ifdef JAAT_IMPLEMENTATION
 
 #include "JAAT.h"
+
+
+/*
+
+=======================================
+
+JAAT PROGRAMM LOADER
+
+======================================
+
+*/ 
+
+void jaat_load_programm(Array *new_prg){
+  if(DEBUG) printf("[PROGRAMM_LOADER]: start loading programm\n");
+  // create local array
+  fn_name_space_ptr = 0;
+  prg = (vm_programm*)malloc(sizeof(vm_programm));
+  prg->inst_array = (char**)malloc(sizeof(char*)* new_prg->nelem+1);
+  for(int i=0;i<new_prg->nelem;i++){
+    char *st = NULL;
+    array_get(new_prg, i, st);
+    prg->inst_array[i] = st;
+  }
+  prg->programm_lenght = new_prg->nelem;
+
+  JAAT.programm_counter = 0;
+  JAAT.negative = false;
+  JAAT.overflow = false;
+  JAAT.zero = false;
+  JAAT.halt = false;
+  JAAT.accumulator = 0;
+  JAAT.current_pointer = 0;
+  JAAT.string_tracker = 0;
+  JAAT.const_tracker = 0;
+  JAAT.input_tracker_read = 0;
+  JAAT.input_tracker_write = 0;
+  parse_preprocessor();
+  parse_instruction();
+}
+
+
+
+
+
+/*
+
+=======================================
+
+JAAT INSTRUCTION PREPROCESSOR
+
+======================================
+
+*/ 
+
 
 void parse_preprocessor(){
   int fn_index = 0;
@@ -254,6 +368,18 @@ void parse_preprocessor(){
 
   }
 }
+
+
+
+/*
+
+=======================================
+
+JAAT INSTRUCTION PARSER
+
+======================================
+
+*/ 
 
 void parse_instruction(){
   if(DEBUG) printf("[PARSER]: start instruction parser\n");
@@ -506,6 +632,19 @@ void parse_instruction(){
   }
 }
 
+
+
+/*
+
+=======================================
+
+JAAT INSTRUCTION PREPROCESSOR: 
+        name space reference part
+
+======================================
+
+*/ 
+
 int parser_check_for_namespace(vm_inst inst, char* line){
   // parse name spaces
   char local_name_space[NAME_SPACE_LENGHT];
@@ -538,6 +677,87 @@ int parser_check_for_namespace(vm_inst inst, char* line){
   return arg_0;
 }
 
+
+
+/*
+
+=======================================
+
+JAAT ENVIRONMENT STARTER
+
+======================================
+
+*/ 
+
+void jaat_start(int size){
+  if(DEBUG) printf("[STARTER]: startint vm\n");
+  pool_size = size;
+  instruction_pool = (BYTE_LENGHT*)malloc(sizeof(BYTE_LENGHT)*3*pool_size);
+  if(DEBUG) printf("[STARTER]: instruction_pool buffer  allocated\n");
+  string_buffer = malloc(sizeof(char*)*pool_size);
+  if(DEBUG) printf("[STARTER]: string_buffer allocated\n");
+  constant_type_buffer = malloc(sizeof(vm_constant_type)*pool_size);
+  if(DEBUG) printf("[STARTER]: costant type buffer allocated\n");
+  input_buffer = malloc(sizeof(char)*input_buffer_size);
+  if(DEBUG) printf("[STARTER]: input buffer allocated\n");
+  fn_name_space = (Box*)malloc(sizeof(Box)*pool_size);
+  if(DEBUG) printf("[STARTER]: fn_name_space buffer allocated\n");
+}
+
+
+
+
+/*
+
+=======================================
+
+JAAT INSTRUCTION LOADER
+
+======================================
+
+*/ 
+
+void jaat_load(vm_inst instruction, int arg_0,int arg_1){
+  if(DEBUG) printf("[LOAD]: load single instruction\n");
+  JAAT.current_instruction = instruction;
+  JAAT.arg_0 = arg_0;
+  JAAT.arg_1 = arg_1;
+  switch(instruction){
+    case PRT_STRING:
+    case PUT_STRING:
+      if(string_buffer[JAAT.string_tracker] != NULL){
+        JAAT.string_ptr = string_buffer[JAAT.string_tracker];
+        JAAT.string_tracker += 1;
+      }
+      break;
+
+    case PRT_CONSTANT:
+    case PUT_CONSTANT:
+    case GET_CONSTANT:
+    case INC_CONSTANT:
+    case DEC_CONSTANT:
+      if(constant_type_buffer[JAAT.const_tracker] != 0){
+        JAAT.constant_type = constant_type_buffer[JAAT.const_tracker];  
+        JAAT.const_tracker += 1;
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+
+
+
+/*
+
+=======================================
+
+JAAT RUNTIME LOOP
+
+======================================
+
+*/ 
 
 void jaat_loop(){
   char input;
@@ -679,65 +899,19 @@ void jaat_loop(){
   } 
 }
 
-void jaat_load(vm_inst instruction, int arg_0,int arg_1){
-  if(DEBUG) printf("[LOAD]: load single instruction\n");
-  JAAT.current_instruction = instruction;
-  JAAT.arg_0 = arg_0;
-  JAAT.arg_1 = arg_1;
-  switch(instruction){
-    case PRT_STRING:
-    case PUT_STRING:
-      if(string_buffer[JAAT.string_tracker] != NULL){
-        JAAT.string_ptr = string_buffer[JAAT.string_tracker];
-        JAAT.string_tracker += 1;
-      }
-      break;
 
-    case PRT_CONSTANT:
-    case PUT_CONSTANT:
-    case GET_CONSTANT:
-    case INC_CONSTANT:
-    case DEC_CONSTANT:
-      if(constant_type_buffer[JAAT.const_tracker] != 0){
-        JAAT.constant_type = constant_type_buffer[JAAT.const_tracker];  
-        JAAT.const_tracker += 1;
-      }
-      break;
-    default:
-      break;
-  }
-}
 
-void jaat_start(int size){
-  if(DEBUG) printf("[STARTER]: startint vm\n");
-  pool_size = size;
-  instruction_pool = (BYTE_LENGHT*)malloc(sizeof(BYTE_LENGHT)*3*pool_size);
-  if(DEBUG) printf("[STARTER]: instruction_pool buffer  allocated\n");
-  string_buffer = malloc(sizeof(char*)*pool_size);
-  if(DEBUG) printf("[STARTER]: string_buffer allocated\n");
-  constant_type_buffer = malloc(sizeof(vm_constant_type)*pool_size);
-  if(DEBUG) printf("[STARTER]: costant type buffer allocated\n");
-  input_buffer = malloc(sizeof(char)*input_buffer_size);
-  if(DEBUG) printf("[STARTER]: input buffer allocated\n");
-  fn_name_space = (Box*)malloc(sizeof(Box)*pool_size);
-  if(DEBUG) printf("[STARTER]: fn_name_space buffer allocated\n");
-}
 
-void jaat_free(){
-  if(DEBUG) printf("[CLOSING PROCESS]: free ram location\n");
-  free(instruction_pool);
-  instruction_pool = 0;
-  free(string_buffer);
-  string_buffer = 0;
-  free(input_buffer);
-  input_buffer = 0;
-  free(constant_type_buffer);
-  constant_type_buffer = 0;
-  free(prg);
-  prg = 0;
-  free(fn_name_space);
-  fn_name_space = 0;
-}
+/*
+
+=======================================
+
+JAAT RUNTIME INSTRUCTION EXECUTOR
+
+======================================
+
+*/ 
+
 
 void jaat_exec(){
   if(DEBUG) printf("[EXECUTOR]: starting execution\n");
@@ -839,33 +1013,50 @@ void jaat_exec(){
   }
   return;
 }
-void jaat_load_programm(Array *new_prg){
-  if(DEBUG) printf("[PROGRAMM_LOADER]: start loading programm\n");
-  // create local array
-  fn_name_space_ptr = 0;
-  prg = (vm_programm*)malloc(sizeof(vm_programm));
-  prg->inst_array = (char**)malloc(sizeof(char*)* new_prg->nelem+1);
-  for(int i=0;i<new_prg->nelem;i++){
-    char *st = NULL;
-    array_get(new_prg, i, st);
-    prg->inst_array[i] = st;
-  }
-  prg->programm_lenght = new_prg->nelem;
 
-  JAAT.programm_counter = 0;
-  JAAT.negative = false;
-  JAAT.overflow = false;
-  JAAT.zero = false;
-  JAAT.halt = false;
-  JAAT.accumulator = 0;
-  JAAT.current_pointer = 0;
-  JAAT.string_tracker = 0;
-  JAAT.const_tracker = 0;
-  JAAT.input_tracker_read = 0;
-  JAAT.input_tracker_write = 0;
-  parse_preprocessor();
-  parse_instruction();
+
+/*
+
+=======================================
+
+JAAT ENVIRONMENT FREE
+
+======================================
+
+*/ 
+
+void jaat_free(){
+  if(DEBUG) printf("[CLOSING PROCESS]: free ram location\n");
+  free(instruction_pool);
+  instruction_pool = 0;
+  free(string_buffer);
+  string_buffer = 0;
+  free(input_buffer);
+  input_buffer = 0;
+  free(constant_type_buffer);
+  constant_type_buffer = 0;
+  free(prg);
+  prg = 0;
+  free(fn_name_space);
+  fn_name_space = 0;
 }
+
+// ############################################################################################################
+//  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+// ############################################################################################################ 
+//  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+/*
+
+=======================================
+
+JAAT INSTRUCTION: normal one
+
+======================================
+
+*/ 
+
+
 
 void jaat_hlt(void){
   JAAT.halt = true;
@@ -889,6 +1080,13 @@ void jaat_pop(void){
     JAAT.current_pointer = 0;
   } 
 }
+
+void jaat_get(int arg_0){
+  if(arg_0 >= 0 && arg_0 < STACK_LENGHT){
+    JAAT.accumulator = JAAT.stack[arg_0];
+  }
+}
+
 
 void jaat_adc(int arg_0, int arg_1, bool address_op){
   if(arg_0 < 0 && arg_0 > STACK_LENGHT){
@@ -1072,15 +1270,6 @@ void jaat_dec(int arg_0){
     JAAT.stack[arg_0] = res;   
   }
 }
-
-void jaat_prt_string(char*str){
-  if(DEBUG) printf("\nstdout -> ");
-  fprintf(stdout, "%s", str);
-  if(DEBUG) printf("\n");
-  free(JAAT.string_ptr);
-  JAAT.string_ptr = NULL;
-}
-
 void jaat_scn(){
   char chr;
   if(DEBUG) printf("\n-> stdin: ");
@@ -1096,45 +1285,6 @@ void jaat_scn(){
   input_buffer[JAAT.input_tracker_write] = 0;
   if(DEBUG) printf("\n");
   return;
-}
-
-void jaat_prt_constant(){
-  if(DEBUG) printf("\nstdout -> ");
-  switch(JAAT.constant_type){
-    case INPUT:
-      while(input_buffer[JAAT.input_tracker_read] != 0 && JAAT.input_tracker_read != JAAT.input_tracker_write){
-        printf("%c", input_buffer[JAAT.input_tracker_read]);
-        JAAT.input_tracker_read += 1;
-        if(JAAT.input_tracker_read > input_buffer_size){
-          JAAT.input_tracker_read = 0;
-        }
-      }
-      printf("\n");
-      if(DEBUG){
-        printf("\n");
-      }
-      break;
-    default:
-      NO_IMPLEMENTATION();
-      break;
-  } 
-}
-
-void jaat_get(int arg_0){
-  if(arg_0 >= 0 && arg_0 < STACK_LENGHT){
-    JAAT.accumulator = JAAT.stack[arg_0];
-  }
-}
-
-void jaat_put_constant(){
-  switch (JAAT.constant_type) {
-    case ACC:
-      PUT(JAAT.accumulator); 
-      break;
-    default:
-      NO_IMPLEMENTATION();
-      break;
-  }
 }
 
 
@@ -1158,13 +1308,51 @@ void jaat_rts(){
   JAAT.programm_counter = JAAT.stack[JAAT.stack_address_pointer + STACK_LENGHT-256];
 }
 
-void jaat_put_string(){
-  for(int i=0;i<strlen(JAAT.string_ptr); i++){
-    PUT((int)JAAT.string_ptr[i]);
+
+/*
+
+=======================================
+
+JAAT INSTRUCTION: constant variation
+
+======================================
+
+*/ 
+
+
+
+void jaat_prt_constant(){
+  if(DEBUG) printf("\nstdout -> ");
+  switch(JAAT.constant_type){
+    case INPUT:
+      while(input_buffer[JAAT.input_tracker_read] != 0 && JAAT.input_tracker_read != JAAT.input_tracker_write){
+        printf("%c", input_buffer[JAAT.input_tracker_read]);
+        JAAT.input_tracker_read += 1;
+        if(JAAT.input_tracker_read > input_buffer_size){
+          JAAT.input_tracker_read = 0;
+        }
+      }
+      printf("\n");
+      if(DEBUG){
+        printf("\n");
+      }
+      break;
+    default:
+      NO_IMPLEMENTATION();
+      break;
+  } 
+}
+
+
+void jaat_put_constant(){
+  switch (JAAT.constant_type) {
+    case ACC:
+      PUT(JAAT.accumulator); 
+      break;
+    default:
+      NO_IMPLEMENTATION();
+      break;
   }
-  if(DEBUG) printf("\n");
-  free(JAAT.string_ptr);
-  JAAT.string_ptr = NULL;
 }
 
 void jaat_get_constant(){
@@ -1208,6 +1396,39 @@ void jaat_dec_constant(){
       break;
   }
 }
+
+
+
+/*
+
+=======================================
+
+JAAT INSTRUCTION: string variation
+
+======================================
+
+*/ 
+
+
+void jaat_put_string(){
+  for(int i=0;i<strlen(JAAT.string_ptr); i++){
+    PUT((int)JAAT.string_ptr[i]);
+  }
+  if(DEBUG) printf("\n");
+  free(JAAT.string_ptr);
+  JAAT.string_ptr = NULL;
+}
+
+
+
+void jaat_prt_string(char*str){
+  if(DEBUG) printf("\nstdout -> ");
+  fprintf(stdout, "%s", str);
+  if(DEBUG) printf("\n");
+  free(JAAT.string_ptr);
+  JAAT.string_ptr = NULL;
+}
+
 
 #endif
 
