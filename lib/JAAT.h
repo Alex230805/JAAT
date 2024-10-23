@@ -31,10 +31,10 @@
 #define WORD_LEN 512
 #define DEBUG false 
 #define NAME_SPACE_LENGHT 256
-#define MACHINE_STATE false
+#define MACHINE_STATE true
 #define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
 
-#define ILLEGAL_INST(line) fprintf(stderr, "[PARSER]: ERROR: Illegal instruction on line %d", line); exit(7);
+#define ILLEGAL_INST(line, message) fprintf(stderr, "[PARSER]: ERROR: Illegal instruction on line %d: %s", line, message); exit(7);
 #define STR_LEN 512
 
 #define STACK_OVER() fprintf(stdout, "[SYSTEM]: WARNING: stack overflow reached, but execution is not halted\n"); 
@@ -67,8 +67,10 @@ typedef enum{
   HLT = 0,
   PUT,
   PUT_CONSTANT,
+  PUT_STRING,
   POP,
   GET,
+  GET_CONSTANT,
   ADC,
   ADC_ADR,
   SBC,
@@ -88,13 +90,16 @@ typedef enum{
   PRT_STRING,
   PRT_CONSTANT,
   INC,
+  INC_CONSTANT,
   DEC,
+  DEC_CONSTANT,
   SCN,
 }vm_inst;
 
 typedef enum{
   INPUT = 1,
-  ACC
+  ACC,
+  STACK_PTR
 }vm_constant_type;
 
 
@@ -151,8 +156,10 @@ void parse_preprocessor();
 void jaat_hlt(void);
 void jaat_put(int arg_0);
 void jaat_put_constant(void);
+void jaat_put_string(void);
 void jaat_pop(void);
 void jaat_get(int arg_0);
+void jaat_get_constant(void);
 void jaat_adc(int arg_0, int arg_1, bool address_op);
 void jaat_sbc(int arg_0, int arg_1, bool address_op);
 void jaat_jmp(int arg_0);
@@ -170,6 +177,8 @@ void jaat_prt(int arg_0);
 void jaat_prt_string(char*arg_0);
 void jaat_prt_constant(void);
 void jaat_inc(int arg_0);
+void jaat_inc_constant(void);
+void jaat_dec_constant(void);
 void jaat_dec(int arg_0);
 void jaat_scn(void);
 
@@ -177,9 +186,11 @@ void jaat_scn(void);
 
 #define HLT()                  jaat_hlt();             // halt function: halt the execution
 #define PUT_CONSTANT()         jaat_put_constant();    // put function with constant: basically put but with special things 
+#define PUT_STRING()           jaat_put_string();
 #define PUT(arg_0)             jaat_put(arg_0);        // put function:  put arg_0 data into stack
 #define POP()                  jaat_pop();             // pop function:  pop the stack content from stack and load the accumulator
 #define GET(arg_0)             jaat_get(arg_0);        // get function:  get item from stack and put it into accumulator
+#define GET_CONSTANT()         jaat_get_constant();
 #define ADC(arg_0,arg_1,flag)  jaat_adc(arg_0,arg_1,flag);  // adc function:  sum accumulator content with arg_1 content and put into arg_0 address, if flag is enable then the sum is between arg_0 and arg_1 location content
 #define SBC(arg_0,arg_1,flag)  jaat_sbc(arg_0,arg_1,flag);  // sbc function:  sub accumulator content with arg_1 content and put into arg_0 address, if flag is enable then it behave the same as ADC
 #define JMP(arg_0)             jaat_jmp(arg_0);        // jmp function:  jump to a specific point in programm
@@ -195,7 +206,10 @@ void jaat_scn(void);
 #define PRV()                  jaat_prv();             // prv function: decrement the stack pointer by one 
 #define SWP(arg_0,arg_1)       jaat_swp(arg_0,arg_1);  // swp function: swap the content of two element 
 #define INC(arg_0)             jaat_inc(arg_0);        // inc function: increment data in position arg_0
+#define INC_CONSTANT()         jaat_inc_constant();
 #define DEC(arg_0)             jaat_dec(arg_0);        // dec function: decrement data in position arg_0
+#define DEC_CONSTANT()         jaat_dec_constant();
+
 #define PRT_STRING(arg_0)      jaat_prt_string(arg_0); // prt_string:   string variation of prt
 #define SCN()                  jaat_scn();             // scn function: scan for keyboard input
 #define PRT_CONSTANT()          jaat_prt_constant();
@@ -223,6 +237,8 @@ void parse_preprocessor(){
   int fn_index = 0;
   if(DEBUG) printf("[PARSER PREPROCESSOR]: Starting preprocessing, checking for name space definition\n");
   for(int i=0;i<prg->programm_lenght;i++){
+    // preprocessor: parsing namespace for function reference
+
     if(prg->inst_array[i][0] =='!'){
       if(DEBUG) printf("[PARSER PREPROCESSOR]: name space parser triggered\n");
       // save name_space
@@ -234,6 +250,8 @@ void parse_preprocessor(){
         fn_name_space_ptr = 0;
       }
     }
+
+
   }
 }
 
@@ -336,7 +354,7 @@ void parse_instruction(){
           type = CMP_ADR;
           break;
         default:
-          ILLEGAL_INST(i+1);
+          ILLEGAL_INST(i+1, "failed while checking for address variation\n");
           break;
       } 
     }
@@ -348,8 +366,12 @@ void parse_instruction(){
         case PRT:
           type = PRT_STRING;
           break;
+        case PUT:
+          type = PUT_STRING;
+          break;
+
         default:
-          ILLEGAL_INST(i+1);
+          ILLEGAL_INST(i+1, "failed while checking for string\n");
           break;
       }
       string = true;
@@ -363,14 +385,29 @@ void parse_instruction(){
           is_constant = true;
           type = PRT_CONSTANT;
           break;
+
         case PUT:
           is_constant = true;
           type = PUT_CONSTANT;
           break;
+
+        case GET:
+          is_constant = true;
+          type = GET_CONSTANT;
+          break;
+
+        case INC:
+          is_constant = true;
+          type = INC_CONSTANT;
+          break;
+        case DEC:
+          is_constant = true;
+          type = DEC_CONSTANT;
+          break;
         default:
           arg_0 = parser_check_for_namespace(type, prg->inst_array[i]);
           if(arg_0 == -1){
-            ILLEGAL_INST(i+1);
+            ILLEGAL_INST(i+1, "failed while checking for constant");
           }
           fun_reference = true;
           break;
@@ -438,8 +475,12 @@ void parse_instruction(){
       if(strcmp(word, "INPUT") == 0){
         constant_type_buffer[const_index] = INPUT;
         const_index += 1;
+      }else if(strcmp(word, "STACK_PTR") == 0){
+        constant_type_buffer[const_index] = STACK_PTR;
+      }else if(strcmp(word, "ACC") == 0){
+        constant_type_buffer[const_index] = ACC;
       }else{
-        ILLEGAL_INST(i+1); 
+        ILLEGAL_INST(i+1, "unable to identify constant\n"); 
         exit(8);
       }
       free(word);
@@ -491,7 +532,7 @@ int parser_check_for_namespace(vm_inst inst, char* line){
       }
       break; 
     default:
-      if(DEBUG) printf("[PARSER]: unable to fund name space reference \n");
+      if(DEBUG) printf("[PARSER]: unable to find name space reference \n");
       break;
   }
   return arg_0;
@@ -522,12 +563,17 @@ void jaat_loop(){
           case PUT_CONSTANT:
               printf("PUT_CONSTANT\n");
               break; 
+          case PUT_STRING:
+              printf("PUT_STRING\n");
           case POP:
               printf("POP\n");
               break; 
           case GET:
               printf("GET\n");
               break; 
+          case GET_CONSTANT:
+              printf("GET_CONSTANT\n");
+              break;
           case ADC:
               printf("ADC\n");
               break; 
@@ -584,10 +630,15 @@ void jaat_loop(){
               break; 
           case INC:
               printf("INC\n");
-              break; 
+              break;
+          case INC_CONSTANT:
+              printf("DEC_CONSTANT\n");
           case DEC:
               printf("DEC\n");
-              break; 
+              break;
+          case DEC_CONSTANT:
+              printf("DEC_CONSTANT\n");
+              break;
           case SCN:
               printf("SCN\n");
               break;  
@@ -612,10 +663,19 @@ void jaat_loop(){
 
   }
   if(MACHINE_STATE){
-    printf("[MACHINE STATE]: ");
-    printf("Zero flag: [%d], ", JAAT.zero);
-    printf("Zero overflow: [%d], ", JAAT.overflow);
+    printf("\n\n[MACHINE STATE]: flags\n");
+    printf("Zero flag: [%d]\n", JAAT.zero);
+    printf("Zero overflow: [%d]\n", JAAT.overflow);
     printf("Zero negative: [%d]\n", JAAT.negative);
+
+    printf("\n[MACHINE STATE]: pointer and tracker\n");
+    printf("String tracker: [%d]\n", JAAT.string_tracker);
+    printf("Constant tracker: [%d]\n", JAAT.const_tracker);
+    printf("Current stack pointer: [%d]\n", JAAT.current_pointer);
+    printf("Input tracker read: [%d]\n", JAAT.input_tracker_read);
+    printf("Input tracker write: [%d]\n", JAAT.input_tracker_write);
+    printf("stack address pointer: [%d]\n", JAAT.stack_address_pointer);
+
   } 
 }
 
@@ -626,6 +686,7 @@ void jaat_load(vm_inst instruction, int arg_0,int arg_1){
   JAAT.arg_1 = arg_1;
   switch(instruction){
     case PRT_STRING:
+    case PUT_STRING:
       if(string_buffer[JAAT.string_tracker] != NULL){
         JAAT.string_ptr = string_buffer[JAAT.string_tracker];
         JAAT.string_tracker += 1;
@@ -634,6 +695,9 @@ void jaat_load(vm_inst instruction, int arg_0,int arg_1){
 
     case PRT_CONSTANT:
     case PUT_CONSTANT:
+    case GET_CONSTANT:
+    case INC_CONSTANT:
+    case DEC_CONSTANT:
       if(constant_type_buffer[JAAT.const_tracker] != 0){
         JAAT.constant_type = constant_type_buffer[JAAT.const_tracker];  
         JAAT.const_tracker += 1;
@@ -684,11 +748,17 @@ void jaat_exec(){
     case PUT:
         PUT(JAAT.arg_0);
         break;
+    case PUT_STRING:
+        PUT_STRING();
+        break;
     case POP:
         POP();
         break;
     case GET:
         GET(JAAT.arg_0);
+        break;
+    case GET_CONSTANT:
+        GET_CONSTANT();
         break;
     case ADC:
         ADC(JAAT.arg_0,JAAT.arg_1,false);
@@ -744,8 +814,14 @@ void jaat_exec(){
     case INC:
         INC(JAAT.arg_0);
         break;
+    case INC_CONSTANT:
+        INC_CONSTANT();
+        break;
     case DEC:
         DEC(JAAT.arg_0);
+        break;
+    case DEC_CONSTANT:
+        DEC_CONSTANT();
         break;
     case SCN:
         SCN();
@@ -1053,7 +1129,7 @@ void jaat_get(int arg_0){
 void jaat_put_constant(){
   switch (JAAT.constant_type) {
     case ACC:
-      jaat_put(JAAT.accumulator); 
+      PUT(JAAT.accumulator); 
       break;
     default:
       NO_IMPLEMENTATION();
@@ -1080,6 +1156,57 @@ void jaat_rts(){
     JAAT.stack_address_pointer = 256;
   }
   JAAT.programm_counter = JAAT.stack[JAAT.stack_address_pointer + STACK_LENGHT-256];
+}
+
+void jaat_put_string(){
+  for(int i=0;i<strlen(JAAT.string_ptr); i++){
+    PUT((int)JAAT.string_ptr[i]);
+  }
+  if(DEBUG) printf("\n");
+  free(JAAT.string_ptr);
+  JAAT.string_ptr = NULL;
+}
+
+void jaat_get_constant(){
+  switch(JAAT.constant_type){
+    case STACK_PTR:
+      JAAT.accumulator = JAAT.current_pointer;
+      if(DEBUG){
+        printf("\n");
+      }
+      break;
+    default:
+      NO_IMPLEMENTATION();
+      break;
+  } 
+}
+
+void jaat_inc_constant(){
+  switch(JAAT.constant_type){
+    case ACC:
+      JAAT.accumulator += 1;
+      if(DEBUG){
+        printf("\n");
+      }
+      break;
+    default:
+      NO_IMPLEMENTATION();
+      break;
+  }
+}
+
+void jaat_dec_constant(){
+  switch(JAAT.constant_type){
+    case ACC:
+      JAAT.accumulator -= 1;
+      if(DEBUG){
+        printf("\n");
+      }
+      break;
+    default:
+      NO_IMPLEMENTATION();
+      break;
+  }
 }
 
 #endif
