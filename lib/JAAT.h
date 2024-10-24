@@ -70,6 +70,10 @@ JAAT INSTRUCTION LIST, CONSTANT
 */ 
 
 
+//
+//  Instruction type: where the instruction are defined
+//
+
 typedef enum{
   HLT = 0,
   PUT,
@@ -103,13 +107,19 @@ typedef enum{
   SCN,
 }vm_inst;
 
+//
+//  Constant type: where the constant are defined
+//
+
 typedef enum{
   INPUT = 1,
   ACC,
   STACK_PTR
 }vm_constant_type;
 
-
+//
+//  JAAT virtual machine: it's a stack based machine, although it's slickly modified concept of a stack machine 
+//
 
 typedef struct{
   int programm_counter;
@@ -137,10 +147,19 @@ typedef struct{
   bool halt;
 }vm;
 
+//
+//  Programm buffer: After you launch the vm it will be allocated based on the dynamic array size. VM_PROGRAMM store all instruction
+//
+
 typedef struct{
   int programm_lenght;
   char** inst_array;
 }vm_programm;
+
+
+//
+//  Box item: used for archive function references and the address related to them
+//
 
 
 typedef struct{
@@ -229,35 +248,35 @@ JAAT TAGS DEFINITION
 
 
 
-#define HLT()                  jaat_hlt();             // halt function: halt the execution
-#define PUT_CONSTANT()         jaat_put_constant();    // put function with constant: basically put but with special things 
-#define PUT_STRING()           jaat_put_string();
-#define PUT(arg_0)             jaat_put(arg_0);        // put function:  put arg_0 data into stack
-#define POP()                  jaat_pop();             // pop function:  pop the stack content from stack and load the accumulator
-#define GET(arg_0)             jaat_get(arg_0);        // get function:  get item from stack and put it into accumulator
-#define GET_CONSTANT()         jaat_get_constant();
-#define ADC(arg_0,arg_1,flag)  jaat_adc(arg_0,arg_1,flag);  // adc function:  sum accumulator content with arg_1 content and put into arg_0 address, if flag is enable then the sum is between arg_0 and arg_1 location content
-#define SBC(arg_0,arg_1,flag)  jaat_sbc(arg_0,arg_1,flag);  // sbc function:  sub accumulator content with arg_1 content and put into arg_0 address, if flag is enable then it behave the same as ADC
-#define JMP(arg_0)             jaat_jmp(arg_0);        // jmp function:  jump to a specific point in programm
-#define JNZ(arg_0)             jaat_jnz(arg_0);        // jnz funciont:  jump if the alu result is not 0
-#define JEQ(arg_0)             jaat_jeq(arg_0);        // jeq funciont:  jump if zero is set
-#define JSR(arg_0)             jaat_jsr(arg_0);        // jsr function: jump into subroutine
-#define RTS()                  jaat_rts();             // rts function: return from subroutine
+#define HLT()                   jaat_hlt();             // halt function: halt the execution
+#define PUT_CONSTANT()          jaat_put_constant();    // put function with constant: basically put but with special things 
+#define PUT_STRING()            jaat_put_string();      // put string function: put a string into stack
+#define PUT(arg_0)              jaat_put(arg_0);        // put function:  put arg_0 data into stack
+#define POP()                   jaat_pop();             // pop function:  pop the stack content from stack and load the accumulator
+#define GET(arg_0)              jaat_get(arg_0);        // get function:  get item from stack and put it into accumulator
+#define GET_CONSTANT()          jaat_get_constant();
+#define ADC(arg_0,arg_1,flag)   jaat_adc(arg_0,arg_1,flag);  // adc function:  sum accumulator content with arg_1 content and put into arg_0 address, if flag is enable then the sum is between arg_0 and arg_1 location content
+#define SBC(arg_0,arg_1,flag)   jaat_sbc(arg_0,arg_1,flag);  // sbc function:  sub accumulator content with arg_1 content and put into arg_0 address, if flag is enable then it behave the same as ADC
+#define JMP(arg_0)              jaat_jmp(arg_0);        // jmp function:  jump to a specific point in programm
+#define JNZ(arg_0)              jaat_jnz(arg_0);        // jnz funciont:  jump if the alu result is not 0
+#define JEQ(arg_0)              jaat_jeq(arg_0);        // jeq funciont:  jump if zero is set
+#define JSR(arg_0)              jaat_jsr(arg_0);        // jsr function: jump into subroutine
+#define RTS()                   jaat_rts();             // rts function: return from subroutine
 
-#define CMP(arg_0, arg_1, flag)      jaat_cmp(arg_0, arg_1, flag); // cmp function:  compare arg_0 stack location with arg_1
-#define JPO(arg_0)             jaat_jpo(arg_0);        // jpo function:  jump if the alu overflow frlag is set
-#define PRT(arg_0)             jaat_prt(arg_0);        // prt print function: print content inside the provided location
-#define NXT()                  jaat_nxt();             // nxt function: increment the stack pointer by one
-#define PRV()                  jaat_prv();             // prv function: decrement the stack pointer by one 
-#define SWP(arg_0,arg_1)       jaat_swp(arg_0,arg_1);  // swp function: swap the content of two element 
-#define INC(arg_0)             jaat_inc(arg_0);        // inc function: increment data in position arg_0
-#define INC_CONSTANT()         jaat_inc_constant();
-#define DEC(arg_0)             jaat_dec(arg_0);        // dec function: decrement data in position arg_0
-#define DEC_CONSTANT()         jaat_dec_constant();
+#define CMP(arg_0, arg_1, flag) jaat_cmp(arg_0, arg_1, flag); // cmp function:  compare arg_0 stack location with arg_1
+#define JPO(arg_0)              jaat_jpo(arg_0);        // jpo function:  jump if the alu overflow frlag is set
+#define PRT(arg_0)              jaat_prt(arg_0);        // prt print function: print content inside the provided location
+#define NXT()                   jaat_nxt();             // nxt function: increment the stack pointer by one
+#define PRV()                   jaat_prv();             // prv function: decrement the stack pointer by one 
+#define SWP(arg_0,arg_1)        jaat_swp(arg_0,arg_1);  // swp function: swap the content of two element 
+#define INC(arg_0)              jaat_inc(arg_0);        // inc function: increment data in position arg_0
+#define INC_CONSTANT()          jaat_inc_constant();    // inc constant function: increment by one a constant reference
+#define DEC(arg_0)              jaat_dec(arg_0);        // dec function: decrement data in position arg_0
+#define DEC_CONSTANT()          jaat_dec_constant();    // inc constant function: decrement by one a constant reference 
 
-#define PRT_STRING(arg_0)      jaat_prt_string(arg_0); // prt_string:   string variation of prt
-#define SCN()                  jaat_scn();             // scn function: scan for keyboard input
-#define PRT_CONSTANT()          jaat_prt_constant();
+#define PRT_STRING(arg_0)       jaat_prt_string(arg_0); // prt_string:   string variation of prt
+#define SCN()                   jaat_scn();             // scn function: scan for keyboard input
+#define PRT_CONSTANT()          jaat_prt_constant();    // prt constant: print a constant reference
 
 
 
@@ -274,20 +293,18 @@ JAAT STATIC VARIABLE AND
 
 
 
-int input_buffer_size = 255;
-int pool_size = 1024;
-vm JAAT = {0};
-int fn_name_space_ptr = 0;
+int input_buffer_size = 255;      // keyboard input circular buffer size
+int pool_size;                    // instruction pool size 
+vm JAAT = {0};                    // JAAT vm
+int fn_name_space_ptr = 0;        // function namespace pointer
 
-// programm file 
+BYTE_LENGHT* instruction_pool;    // instruction_pool: will be filled inside the parser
+char** string_buffer;             // string buffer: will be filled with the string inside some instruction
+vm_constant_type* constant_type_buffer; // constant type buffer: will be filled with the constant inside some instruction
+char* input_buffer;               // keyboard input buffer 
+Box *fn_name_space;               // function namespace buffer: where a box item will be created inside a parser if there is a reference to a function
 
-BYTE_LENGHT* instruction_pool;
-char** string_buffer;
-vm_constant_type* constant_type_buffer;
-char* input_buffer;
-Box *fn_name_space;
-
-vm_programm* prg;
+vm_programm* prg;                 // loaded programm buffer: it's used inside the parser to parse each instructions
 
 #ifdef JAAT_IMPLEMENTATION
 
@@ -1045,6 +1062,14 @@ void jaat_free(){
 //  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 // ############################################################################################################ 
 //  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+/*
+ *
+ *  NOTE: the address variation is implemented inside the normal instruction implementation, the 
+ *  only way used to switch between normal operation and address  operation is with a flag passed 
+ *  by argument
+ *
+*/
 
 /*
 
