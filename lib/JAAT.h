@@ -23,43 +23,55 @@
 #define STACK_LENGHT 1024
 #define BYTE_LENGHT u16t
 #define WORD_LEN 512
-#define DEBUG false 
+#define DEBUG true 
 #define NAME_SPACE_LENGHT 256
 #define MACHINE_STATE false
 
-// here the instruction are defined
+// here the instruction are defined by using the X macro technique
 
-#define LIST_OF_INSTRUCTION \
-  X(HLT)\
-  X(PUT)\
-  X(PUT_CONSTANT)\
-  X(PUT_STRING)\
-  X(POP)\
-  X(GET)\
-  X(GET_CONSTANT)\
-  X(ADC)\
-  X(ADC_ADR)\
-  X(SBC)\
-  X(SBC_ADR)\
+#define LIST_OF_INSTRUCTION_C_PRS(ext) \
+  X(GET,ext)\
+  X(PRT,ext)\
+  X(PUT,ext)\
+  X(INC,ext)\
+  X(DEC,ext)
+
+#define LIST_OF_INSTRUCTION_S_PRS(ext) \
+  X(PRT,ext)\
+  X(PUT,ext)
+
+#define LIST_OF_INSTRUCTION_A_PRS(ext) \
+  X(ADC,ext)\
+  X(SBC,ext)\
+  X(CMP,ext)
+
+
+#define LIST_OF_INSTRUCTION_NSP() \
   X(JMP)\
   X(JNZ)\
   X(JPO)\
   X(JSR)\
-  X(JEQ)\
+  X(JEQ)
+
+
+
+#define LIST_OF_INSTRUCTION() \
+  X(HLT)\
+  X(PUT)\
+  X(POP)\
+  X(GET)\
+  X(ADC)\
+  X(SBC)\
   X(RTS)\
   X(CMP)\
-  X(CMP_ADR)\
   X(NXT)\
   X(PRV)\
   X(SWP)\
   X(PRT)\
-  X(PRT_STRING)\
-  X(PRT_CONSTANT)\
   X(INC)\
-  X(INC_CONSTANT)\
   X(DEC)\
-  X(DEC_CONSTANT)\
-  X(SCN)
+  X(SCN)\
+  LIST_OF_INSTRUCTION_NSP()\
 
 
 #define launch_vm(prg) \
@@ -69,99 +81,6 @@
   jaat_free();\
   array_free(prg);
 
-#define jaat_debug(inst_type, pc) \
-        printf("[LOOP]: current programm counter: %d\n",pc);\
-        printf("[LOOP]: current instruction loaded: ");\
-        switch(inst_type){\
-          case HLT:\
-              printf("HLT\n");\
-              break;\
-          case PUT:\
-              printf("PUT\n");\
-              break; \
-          case PUT_CONSTANT:\
-              printf("PUT_CONSTANT\n");\
-              break; \
-          case PUT_STRING:\
-              printf("PUT_STRING\n");\
-          case POP:\
-              printf("POP\n");\
-              break; \
-          case GET:\
-              printf("GET\n");\
-              break; \
-          case GET_CONSTANT:\
-              printf("GET_CONSTANT\n");\
-              break;\
-          case ADC:\
-              printf("ADC\n");\
-              break; \
-          case ADC_ADR:\
-              printf("ADC_ADR\n");\
-              break; \
-          case SBC:\
-              printf("SBC\n");\
-              break; \
-          case SBC_ADR:\
-              printf("SBC_ADR\n");\
-              break; \
-          case JMP:\
-              printf("JMP\n");\
-              break; \
-          case JNZ:\
-              printf("JNZ\n");\
-              break; \
-          case JPO:\
-              printf("JPO\n");\
-              break; \
-          case JSR:\
-              printf("JSR\n");\
-              break; \
-          case JEQ:\
-              printf("JEQ\n");\
-              break; \
-          case RTS:\
-              printf("RTS\n");\
-              break; \
-          case CMP:\
-              printf("CMP\n");\
-              break; \
-          case CMP_ADR:\
-              printf("CMP_ADR\n");\
-              break; \
-          case NXT:\
-              printf("NXT\n");\
-              break; \
-          case PRV:\
-              printf("PRV\n");\
-              break; \
-          case SWP:\
-              printf("SWP\n");\
-              break; \
-          case PRT:\
-              printf("PRT\n");\
-              break; \
-          case PRT_STRING:\
-              printf("PRT_STRING\n");\
-              break;\
-          case PRT_CONSTANT:\
-              printf("PRT_CONSTANT\n");\
-              break;\
-          case INC:\
-              printf("INC\n");\
-              break;\
-          case INC_CONSTANT:\
-              printf("DEC_CONSTANT\n");\
-          case DEC:\
-              printf("DEC\n");\
-              break;\
-          case DEC_CONSTANT:\
-              printf("DEC_CONSTANT\n");\
-              break;\
-          case SCN:\
-              printf("SCN\n");\
-              break;\
-        }
 
 #define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
 
@@ -209,7 +128,15 @@ typedef enum{
 
 #define X(name) name,
 
-  LIST_OF_INSTRUCTION
+  LIST_OF_INSTRUCTION()
+
+#undef X
+
+#define X(name, ext) name##ext,
+
+  LIST_OF_INSTRUCTION_C_PRS(_CONSTANT)
+  LIST_OF_INSTRUCTION_S_PRS(_STRING)
+  LIST_OF_INSTRUCTION_A_PRS(_ADR)
 
 #undef X
 
@@ -298,6 +225,8 @@ void jaat_load_programm(Array *new_prg);
 void parse_instruction(void);
 int parser_check_for_namespace(vm_inst inst, char* line);
 void parse_preprocessor();
+void jaat_debug(int inst_type, int pc);
+
 
 
 /*
@@ -544,7 +473,7 @@ void parse_instruction(){
       not_found = false;\
     }
 
-    LIST_OF_INSTRUCTION;
+    LIST_OF_INSTRUCTION();
 
 #undef X
 
@@ -567,15 +496,15 @@ void parse_instruction(){
     if(prg->inst_array[i][start_point-2] == 35  && !name_space_found && !skip){
       if(DEBUG) printf("[PARSER]: Parsing address function variation\n");
       switch(type){
-        case ADC:
-          type = ADC_ADR;
+
+#define X(name,ext)\
+        case name:\
+          type = name##ext;\
           break;
-        case SBC:
-          type = SBC_ADR;
-          break;
-        case CMP:
-          type = CMP_ADR;
-          break;
+    
+        LIST_OF_INSTRUCTION_A_PRS();
+#undef X
+
         default:
           ILLEGAL_INST(i+1, "failed while checking for address variation\n");
           break;
@@ -586,15 +515,17 @@ void parse_instruction(){
     if((prg->inst_array[i][start_point] == 34 || prg->inst_array[i][start_point] == 39) && !name_space_found && !skip){
       if(DEBUG) printf("[PARSER]: Parsing string literal variation\n");
       switch(type) {
-        case PRT:
-          type = PRT_STRING;
+#define X(name, ext)\
+        case name:\
+          type = name##ext;\
           break;
-        case PUT:
-          type = PUT_STRING;
-          break;
+        
+        LIST_OF_INSTRUCTION_S_PRS(_STRING);
+
+#undef X
 
         default:
-          ILLEGAL_INST(i+1, "failed while checking for string\n");
+            ILLEGAL_INST(i+1, "failed while checking for string\n");
           break;
       }
       string = true;
@@ -604,30 +535,17 @@ void parse_instruction(){
     if((isupper(prg->inst_array[i][start_point]) > 0) &&  !name_space_found && !skip && !fun_reference){
       if(DEBUG) printf("[PARSER]: Parsing constant variation\n");
       switch(type){
-        case PRT:
-          is_constant = true;
-          type = PRT_CONSTANT;
+#define X(name,ext)\
+        case name:\
+          is_constant = true;\
+          type = name##ext;\
           break;
 
-        case PUT:
-          is_constant = true;
-          type = PUT_CONSTANT;
-          break;
+      LIST_OF_INSTRUCTION_C_PRS(_CONSTANT);
 
-        case GET:
-          is_constant = true;
-          type = GET_CONSTANT;
-          break;
+#undef X
 
-        case INC:
-          is_constant = true;
-          type = INC_CONSTANT;
-          break;
-        case DEC:
-          is_constant = true;
-          type = DEC_CONSTANT;
-          break;
-        default:
+       default:
           arg_0 = parser_check_for_namespace(type, prg->inst_array[i]);
           if(arg_0 == -1){
             ILLEGAL_INST(i+1, "failed while checking for constant");
@@ -746,11 +664,13 @@ int parser_check_for_namespace(vm_inst inst, char* line){
   int i=0;
   if(DEBUG) printf("[PARSER]: checks for name space references for [%d] instruction\n", inst);
   switch (inst) {
-    case JMP:
-    case JNZ:
-    case JPO:
-    case JSR:
-    case JEQ:
+
+#define X(name)\
+    case name:
+
+    LIST_OF_INSTRUCTION_NSP();
+
+#undef X
       length = strlen(line);
       for(i=0;i<length-3;i++){
         local_name_space[i] = line[i+4];
@@ -816,24 +736,26 @@ void jaat_load(vm_inst instruction, int arg_0,int arg_1){
   JAAT.arg_0 = arg_0;
   JAAT.arg_1 = arg_1;
   switch(instruction){
-    case PRT_STRING:
-    case PUT_STRING:
+
+#define X(name,ext)\
+    case name##ext:
+
+    LIST_OF_INSTRUCTION_S_PRS(_STRING);
       if(string_buffer[JAAT.string_tracker] != NULL){
         JAAT.string_ptr = string_buffer[JAAT.string_tracker];
         JAAT.string_tracker += 1;
       }
       break;
 
-    case PRT_CONSTANT:
-    case PUT_CONSTANT:
-    case GET_CONSTANT:
-    case INC_CONSTANT:
-    case DEC_CONSTANT:
+    LIST_OF_INSTRUCTION_C_PRS(_CONSTANT);
       if(constant_type_buffer[JAAT.const_tracker] != 0){
         JAAT.constant_type = constant_type_buffer[JAAT.const_tracker];  
         JAAT.const_tracker += 1;
       }
       break;
+
+#undef X
+
     default:
       break;
   }
@@ -901,6 +823,21 @@ void jaat_loop(){
   } 
 }
 
+
+#define X(name) \
+    case name:\
+        printf(#name "\n");\
+        break;
+
+void jaat_debug(int inst_type, int pc){
+        printf("[LOOP]: current programm counter: %d\n",pc);
+        printf("[LOOP]: current instruction loaded: ");
+        switch(inst_type){
+          LIST_OF_INSTRUCTION();
+        }
+}
+
+#undef X
 
 
 
