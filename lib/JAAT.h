@@ -27,7 +27,39 @@
 #define NAME_SPACE_LENGHT 256
 #define MACHINE_STATE false
 
+// here the instruction are defined
 
+#define LIST_OF_INSTRUCTION \
+  X(HLT)\
+  X(PUT)\
+  X(PUT_CONSTANT)\
+  X(PUT_STRING)\
+  X(POP)\
+  X(GET)\
+  X(GET_CONSTANT)\
+  X(ADC)\
+  X(ADC_ADR)\
+  X(SBC)\
+  X(SBC_ADR)\
+  X(JMP)\
+  X(JNZ)\
+  X(JPO)\
+  X(JSR)\
+  X(JEQ)\
+  X(RTS)\
+  X(CMP)\
+  X(CMP_ADR)\
+  X(NXT)\
+  X(PRV)\
+  X(SWP)\
+  X(PRT)\
+  X(PRT_STRING)\
+  X(PRT_CONSTANT)\
+  X(INC)\
+  X(INC_CONSTANT)\
+  X(DEC)\
+  X(DEC_CONSTANT)\
+  X(SCN)
 
 
 #define launch_vm(prg) \
@@ -174,37 +206,15 @@ JAAT INSTRUCTION LIST, CONSTANT
 //
 
 typedef enum{
-  HLT = 0,
-  PUT,
-  PUT_CONSTANT,
-  PUT_STRING,
-  POP,
-  GET,
-  GET_CONSTANT,
-  ADC,
-  ADC_ADR,
-  SBC,
-  SBC_ADR,
-  JMP,
-  JNZ,
-  JPO,
-  JSR,
-  JEQ,
-  RTS,
-  CMP,
-  CMP_ADR,
-  NXT,
-  PRV,
-  SWP,
-  PRT,
-  PRT_STRING,
-  PRT_CONSTANT,
-  INC,
-  INC_CONSTANT,
-  DEC,
-  DEC_CONSTANT,
-  SCN,
+
+#define X(name) name,
+
+  LIST_OF_INSTRUCTION
+
+#undef X
+
 }vm_inst;
+
 
 //
 //  Constant type: where the constant are defined
@@ -510,10 +520,10 @@ void parse_instruction(){
 
   bool is_constant = false;
   bool string;
-  bool halt_exist = false;
   bool name_space_found = false;
   bool skip = false;
   bool fun_reference = false;
+  bool not_found = true;
 
   for(int i=0;i< prg->programm_lenght;i++){
     fun_reference = false;
@@ -523,51 +533,22 @@ void parse_instruction(){
     is_constant = false;
     arg_0 = 0;
     arg_1 = 0;
+    not_found = true;
     memcpy(inst,prg->inst_array[i], sizeof(char)*3);
-
+    
     // check for instruction alignment
-    if(strcmp(inst,"HLT") == 0){
-      type = HLT;
-      halt_exist = true;
-    }else if(strcmp(inst,"PUT") == 0){
-      type = PUT;
-    }else if(strcmp(inst,"POP") == 0){
-      type = POP;
-    }else if(strcmp(inst,"GET") == 0){
-      type = GET;
-    }else if(strcmp(inst,"ADC") == 0){
-      type = ADC;
-    }else if(strcmp(inst, "SBC") == 0){
-      type = SBC;
-    }else if(strcmp(inst,"JMP") == 0){
-      type = JMP;
-    }else if(strcmp(inst, "PRT") == 0){
-      type = PRT;
-    }else if(strcmp(inst, "JNZ") == 0){
-      type = JNZ;
-    }else if(strcmp(inst, "CMP") == 0){
-      type = CMP;
-    }else if(strcmp(inst, "JEQ") == 0){
-      type = JEQ;
-    }else if(strcmp(inst, "NXT") == 0){
-      type = NXT;
-    }else if(strcmp(inst, "PRV") == 0){
-      type = PRV;
-    }else if(strcmp(inst, "SWP") == 0){
-      type = SWP;
-    }else if(strcmp(inst, "INC") == 0){
-      type = INC;
-    }else if(strcmp(inst, "DEC") == 0){
-      type = DEC;
-    }else if(strcmp(inst, "SCN") == 0){
-      type = SCN;
-    }else if(strcmp(inst, "JSR") == 0){
-      type = JSR;
-    }else if(strcmp(inst, "RTS") == 0){
-      type = RTS;
-    }else if(inst[0] == '!'){
-      skip = true;
-    }else{
+
+#define X(name) \
+    if(strcmp(inst, #name) == 0){\
+      type = name;\
+      not_found = false;\
+    }
+
+    LIST_OF_INSTRUCTION;
+
+#undef X
+
+   if(not_found){
       fprintf(stderr, "[PARSER]: ERROR: no such instruction to parse, failed on line %d\n", i+1);
       exit(3);
     }
@@ -742,10 +723,6 @@ void parse_instruction(){
       exit(4);
     }
   } 
-  if(!halt_exist){
-    fprintf(stderr,"ERROR: no halt function found, the programm may fail or may act in a non predetermined way\n");
-    exit(6);
-  }
 }
 
 
