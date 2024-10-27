@@ -13,12 +13,6 @@
 
 #include "./Array.h"
 
-#define launch_vm(prg) \
-  jaat_start(prg->nelem+1);\
-  jaat_load_programm(prg);\
-  jaat_loop();\
-  jaat_free();\
-  array_free(prg);
 
 #define u8t uint8_t
 #define u16t uint16_t
@@ -32,6 +26,111 @@
 #define DEBUG false 
 #define NAME_SPACE_LENGHT 256
 #define MACHINE_STATE false
+
+
+
+
+#define launch_vm(prg) \
+  jaat_start(prg->nelem+1);\
+  jaat_load_programm(prg);\
+  jaat_loop();\
+  jaat_free();\
+  array_free(prg);
+
+#define jaat_debug(inst_type, pc) \
+        printf("[LOOP]: current programm counter: %d\n",pc);\
+        printf("[LOOP]: current instruction loaded: ");\
+        switch(inst_type){\
+          case HLT:\
+              printf("HLT\n");\
+              break;\
+          case PUT:\
+              printf("PUT\n");\
+              break; \
+          case PUT_CONSTANT:\
+              printf("PUT_CONSTANT\n");\
+              break; \
+          case PUT_STRING:\
+              printf("PUT_STRING\n");\
+          case POP:\
+              printf("POP\n");\
+              break; \
+          case GET:\
+              printf("GET\n");\
+              break; \
+          case GET_CONSTANT:\
+              printf("GET_CONSTANT\n");\
+              break;\
+          case ADC:\
+              printf("ADC\n");\
+              break; \
+          case ADC_ADR:\
+              printf("ADC_ADR\n");\
+              break; \
+          case SBC:\
+              printf("SBC\n");\
+              break; \
+          case SBC_ADR:\
+              printf("SBC_ADR\n");\
+              break; \
+          case JMP:\
+              printf("JMP\n");\
+              break; \
+          case JNZ:\
+              printf("JNZ\n");\
+              break; \
+          case JPO:\
+              printf("JPO\n");\
+              break; \
+          case JSR:\
+              printf("JSR\n");\
+              break; \
+          case JEQ:\
+              printf("JEQ\n");\
+              break; \
+          case RTS:\
+              printf("RTS\n");\
+              break; \
+          case CMP:\
+              printf("CMP\n");\
+              break; \
+          case CMP_ADR:\
+              printf("CMP_ADR\n");\
+              break; \
+          case NXT:\
+              printf("NXT\n");\
+              break; \
+          case PRV:\
+              printf("PRV\n");\
+              break; \
+          case SWP:\
+              printf("SWP\n");\
+              break; \
+          case PRT:\
+              printf("PRT\n");\
+              break; \
+          case PRT_STRING:\
+              printf("PRT_STRING\n");\
+              break;\
+          case PRT_CONSTANT:\
+              printf("PRT_CONSTANT\n");\
+              break;\
+          case INC:\
+              printf("INC\n");\
+              break;\
+          case INC_CONSTANT:\
+              printf("DEC_CONSTANT\n");\
+          case DEC:\
+              printf("DEC\n");\
+              break;\
+          case DEC_CONSTANT:\
+              printf("DEC_CONSTANT\n");\
+              break;\
+          case SCN:\
+              printf("SCN\n");\
+              break;\
+        }
+
 #define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
 
 #define ILLEGAL_INST(line, message) fprintf(stderr, "[PARSER]: ERROR: Illegal instruction on line %d: %s", line, message); exit(7);
@@ -771,98 +870,7 @@ void jaat_loop(){
       
       BYTE_LENGHT inst = instruction_pool[JAAT.programm_counter];
       if(DEBUG){
-        printf("[LOOP]: current programm counter: %d\n",JAAT.programm_counter);        
-        printf("[LOOP]: current instruction loaded: ");
-        switch(instruction_pool[JAAT.programm_counter]){
-          case HLT:
-              printf("HLT\n");
-              break;
-          case PUT:
-              printf("PUT\n");
-              break; 
-          case PUT_CONSTANT:
-              printf("PUT_CONSTANT\n");
-              break; 
-          case PUT_STRING:
-              printf("PUT_STRING\n");
-          case POP:
-              printf("POP\n");
-              break; 
-          case GET:
-              printf("GET\n");
-              break; 
-          case GET_CONSTANT:
-              printf("GET_CONSTANT\n");
-              break;
-          case ADC:
-              printf("ADC\n");
-              break; 
-          case ADC_ADR:
-              printf("ADC_ADR\n");
-              break; 
-          case SBC:
-              printf("SBC\n");
-              break; 
-          case SBC_ADR:
-              printf("SBC_ADR\n");
-              break; 
-          case JMP:
-              printf("JMP\n");
-              break; 
-          case JNZ:
-              printf("JNZ\n");
-              break; 
-          case JPO:
-              printf("JPO\n");
-              break; 
-          case JSR:
-              printf("JSR\n");
-              break; 
-          case JEQ:
-              printf("JEQ\n");
-              break; 
-          case RTS:
-              printf("RTS\n");
-              break; 
-          case CMP:
-              printf("CMP\n");
-              break; 
-          case CMP_ADR:
-              printf("CMP_ADR\n");
-              break; 
-          case NXT:
-              printf("NXT\n");
-              break; 
-          case PRV:
-              printf("PRV\n");
-              break; 
-          case SWP:
-              printf("SWP\n");
-              break; 
-          case PRT:
-              printf("PRT\n");
-              break; 
-          case PRT_STRING:
-              printf("PRT_STRING\n");
-              break; 
-          case PRT_CONSTANT:
-              printf("PRT_CONSTANT\n");
-              break; 
-          case INC:
-              printf("INC\n");
-              break;
-          case INC_CONSTANT:
-              printf("DEC_CONSTANT\n");
-          case DEC:
-              printf("DEC\n");
-              break;
-          case DEC_CONSTANT:
-              printf("DEC_CONSTANT\n");
-              break;
-          case SCN:
-              printf("SCN\n");
-              break;  
-        }
+        jaat_debug(inst, JAAT.programm_counter);
       } 
       int arg_0 = (int) instruction_pool[JAAT.programm_counter+1]; 
       int arg_1 = (int) instruction_pool[JAAT.programm_counter+2];
