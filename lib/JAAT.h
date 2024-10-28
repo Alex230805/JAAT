@@ -441,6 +441,8 @@ void jaat_load_programm(Array *new_prg){
   }
   prg->programm_lenght = new_prg->nelem;
 
+  /* reset/initialize vm state: needed if you load and lauch multiple programms within the same process */
+
   JAAT.programm_counter = 0;
   JAAT.negative = false;
   JAAT.overflow = false;
@@ -452,6 +454,8 @@ void jaat_load_programm(Array *new_prg){
   JAAT.const_tracker = 0;
   JAAT.input_tracker_read = 0;
   JAAT.input_tracker_write = 0;
+
+  /* call the parser for loading the instruction */
   parse_preprocessor();
   parse_instruction();
 }
@@ -556,13 +560,13 @@ void parse_instruction(){
     
     // find the starting point for parsing the arguments
     for(start_point = 0; start_point < WORD_LEN && !end && !name_space_found && !skip && !fun_reference ;start_point++){
-      if(prg->inst_array[i][start_point] == 40){
+      if(prg->inst_array[i][start_point] == '('){
         end = true;
       }
     }
 
     // check for full address variation
-    if(prg->inst_array[i][start_point-2] == 35  && !name_space_found && !skip){
+    if(prg->inst_array[i][start_point-2] == '#'  && !name_space_found && !skip){
       if(DEBUG) printf("[PARSER]: Parsing address function variation\n");
       switch(type){
 
@@ -581,7 +585,7 @@ void parse_instruction(){
     }
 
     // check for string variation
-    if((prg->inst_array[i][start_point] == 34 || prg->inst_array[i][start_point] == 39) && !name_space_found && !skip){
+    if((prg->inst_array[i][start_point] == '"' || prg->inst_array[i][start_point] == 39) && !name_space_found && !skip){
       if(DEBUG) printf("[PARSER]: Parsing string literal variation\n");
       switch(type) {
 #define X(name, ext)\
@@ -632,9 +636,9 @@ void parse_instruction(){
 
     // check for default parameter arg_0,arg_1
     while(!end && ptr < WORD_LEN-start_point && string == false && is_constant == false && !name_space_found && !skip && !fun_reference){
-      if(prg->inst_array[i][start_point+ptr] == 41 && prg->inst_array[i][start_point+ptr+1] == 0){
+      if(prg->inst_array[i][start_point+ptr] == ')' && prg->inst_array[i][start_point+ptr+1] == 0){
         end = true;
-      }else if(prg->inst_array[i][start_point+ptr] != 32 && prg->inst_array[i][start_point+ptr] != 44){
+      }else if(prg->inst_array[i][start_point+ptr] != ' ' && prg->inst_array[i][start_point+ptr] != ','){
         if (!first) {
           arg_0 = atoi(&prg->inst_array[i][start_point+ptr]);
           first = true;
@@ -646,10 +650,10 @@ void parse_instruction(){
       ptr+=1;
     }
 
-    // check for lenght of string
+    // check for lenght of string and constant
     end = false;
-    while(!end && current_str_len < STR_LEN && string == true && is_constant == false && !name_space_found && !skip && !fun_reference ){
-      if(prg->inst_array[i][start_point+ptr] == 41 && prg->inst_array[i][start_point+ptr+1] == 0){
+    while(!end && current_str_len < STR_LEN && ( string == true || is_constant == true ) && !name_space_found && !skip && !fun_reference ){
+      if(prg->inst_array[i][start_point+ptr] == ')' && prg->inst_array[i][start_point+ptr+1] == 0){
         end = true;
       }else {
         current_str_len += 1;
@@ -657,17 +661,6 @@ void parse_instruction(){
       ptr += 1;
     }
 
-    // check for lenght of constant
-    end = false;
-    while(!end && current_str_len < STR_LEN && is_constant == true && string == false && !name_space_found && !skip && !fun_reference ){
-     if(prg->inst_array[i][start_point+ptr] == 41 && prg->inst_array[i][start_point+ptr+1] == 0){
-        end = true;
-      }else {
-        current_str_len += 1;
-      }
-      ptr += 1; 
-    }
-    
     // check for string alignment 
     if(string && !name_space_found && !skip && !fun_reference ){
       str = (char*)malloc(sizeof(char)*current_str_len-2);

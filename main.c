@@ -135,6 +135,17 @@ int main(int argc, char** argv){
         list_message();
       }if((strcmp(argv[i], "-n") == 0) || (strcmp(argv[i], "--new") == 0)){
         if(argv[i+1] != NULL){
+
+        /*
+
+          =======================================
+
+          JAAT BACKEND PREPROCESSOR
+
+          ======================================
+
+          */           
+          
           FILE *programm;
           if((programm = fopen(argv[i+1], "rb")) == NULL){
             fprintf(stderr, "ERROR: unable to open file -> %d\n", errno);
@@ -149,7 +160,7 @@ int main(int argc, char** argv){
             buffer_t = (char*)malloc(sizeof(char)*255);
             state = fgets(buffer_t, 255, programm);
             // check for special chars in string like \n or \t
-            if(buffer_t[0] != 10 && (buffer_t[0] != 47 && buffer_t[1] != 47 && state != NULL)){ 
+            if(buffer_t[0] != 10 && (buffer_t[0] != '/' && buffer_t[1] != '/' && state != NULL)){ 
               char new_buffer[255];
               for(int i=0;i<255 && buffer_t[i] != 0; i++){
 
