@@ -23,11 +23,41 @@
 #define STACK_LENGHT 1024
 #define BYTE_LENGHT u16t
 #define WORD_LEN 512
-#define DEBUG true 
+#define DEBUG false 
 #define NAME_SPACE_LENGHT 256
 #define MACHINE_STATE false
 
-// here the instruction are defined by using the X macro technique
+
+/*
+
+=======================================
+
+JAAT INSTRUCTION DECLARATION BY USING 
+  THE X MACRO TECHNIQUE 
+
+======================================
+
+*/ 
+
+
+
+/*
+ *  STEP TO ADD AN INSTRUCTION
+ *
+ *  1 - First declare the instruction in the correct class (LIST_OF_INSTRUCTION, LIST_OF_INSTRUCTION_C_PRS, LIST_OF_INSTRUCTION_S_PRS, LIST_OF_INSTRUCTION_A_PRS, LIST_OF_INSTRUCTION_NSP) 
+ *  2 - define and create the function associated with the instruction
+ *  3 - create a tag to link the instruction
+ *  4 - add the tag in the function jaat_exec() by creating a specific case in the switch case
+ *  5 - IF you find some problem you can compile JAAT with the debug flag activated to check at witch level JAAT fails.
+ *
+ *
+ *  If you want to add new constant to parse you can update the CONSTANT_TYPE_LIST up here 
+ *
+ * */
+
+
+
+/* instruction that support constant as argument */
 
 #define LIST_OF_INSTRUCTION_C_PRS(ext) \
   X(GET,ext)\
@@ -36,15 +66,20 @@
   X(INC,ext)\
   X(DEC,ext)
 
+/* instruction that support string as argument */
+
 #define LIST_OF_INSTRUCTION_S_PRS(ext) \
   X(PRT,ext)\
   X(PUT,ext)
+
+/* instruction that support address operation */
 
 #define LIST_OF_INSTRUCTION_A_PRS(ext) \
   X(ADC,ext)\
   X(SBC,ext)\
   X(CMP,ext)
 
+/* instruction that support NAME_SPACE usage ( usually jump instruction and variation ) */
 
 #define LIST_OF_INSTRUCTION_NSP() \
   X(JMP)\
@@ -54,6 +89,7 @@
   X(JEQ)
 
 
+/* base instruction */ 
 
 #define LIST_OF_INSTRUCTION() \
   X(HLT)\
@@ -74,6 +110,37 @@
   LIST_OF_INSTRUCTION_NSP()\
 
 
+/*
+
+=======================================
+
+JAAT CONSTANT DECLARATION USABLE
+  BY EACH INSTRUCTION IF YOU WANT
+
+======================================
+
+*/ 
+
+
+
+
+#define CONSTANT_TYPE_LIST\
+  X(INPUT)\
+  X(ACC)\
+  X(STACK_PTR)
+
+/*
+
+=======================================
+
+JAAT MAIN LAUNCH SEQUENCE
+
+======================================
+
+*/ 
+
+
+
 #define launch_vm(prg) \
   jaat_start(prg->nelem+1);\
   jaat_load_programm(prg);\
@@ -82,31 +149,21 @@
   array_free(prg);
 
 
-#define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
+/*
+ * 
+ *  Some preprocessor things to manage error message
+ *
+ * */
 
+#define NO_IMPLEMENTATION() fprintf(stderr,"Feature under development\n"); return;
 #define ILLEGAL_INST(line, message) fprintf(stderr, "[PARSER]: ERROR: Illegal instruction on line %d: %s", line, message); exit(7);
 #define STR_LEN 512
-
 #define STACK_OVER() fprintf(stdout, "[SYSTEM]: WARNING: stack overflow reached, but execution is not halted\n"); 
-
 #define STACK_UNDER() fprintf(stdout, "[SYSTEM]: WARNING: stack underflow reached, but execution is not halted\n");
-
 #define OUT_OF_PROGRAMM() fprintf(stderr, "[SYSTEM]: Programm counter is try to read out of programm lenght");  
 
 
-/*
- *  STEP TO ADD AN INSTRUCTION
- *
- *  1 - declare it in the vm_instruction list
- *  2 - decide the type (a normal one, a string or a constant one)
- *  3 - update the parser in the instruction identification part
- *  4 - update the parser in the selected parser section ( for string or constant)
- *  5 - create the function related to the instruction
- *  6 - define the instruction macro
- *  7 - use the macro in the jaat_loo() in a case inside the switch case
- *  8 - if you have created an instruction with variation string or constant, you need to update the
- *      jaat_load() function, specifically the switch case.
- * */
+
 
 /*
 
@@ -120,9 +177,19 @@ JAAT INSTRUCTION LIST, CONSTANT
 */ 
 
 
-//
-//  Instruction type: where the instruction are defined
-//
+/* NOTE: here the vm_inst enumerator is built with x macro technique,
+ * remember that for each variation you need to declare the function
+ * associated with the instruction AND the tag, then you can update the
+ * jaat_exec function.
+ *
+ * I tell you this because it's not obvious that every variation have
+ * an individual function associated, for example the address fariation
+ * is declared as a separate instruction, BUT it use the same function 
+ * with a flag to tell if is called to work with address or not.
+ *
+ *
+ * */
+
 
 typedef enum{
 
@@ -147,11 +214,13 @@ typedef enum{
 //  Constant type: where the constant are defined
 //
 
+#define X(name) name,
+
 typedef enum{
-  INPUT = 1,
-  ACC,
-  STACK_PTR
+  CONSTANT_TYPE_LIST
 }vm_constant_type;
+
+#undef X
 
 //
 //  JAAT virtual machine: it's a stack based machine, although it's slickly modified concept of a stack machine 
@@ -613,14 +682,20 @@ void parse_instruction(){
       char* word = (char*)malloc(sizeof(char)*current_str_len);
       memcpy(word, &prg->inst_array[i][start_point], sizeof(char)*current_str_len);
       word[current_str_len] = 0;
-      if(strcmp(word, "INPUT") == 0){
-        constant_type_buffer[const_index] = INPUT;
-        const_index += 1;
-      }else if(strcmp(word, "STACK_PTR") == 0){
-        constant_type_buffer[const_index] = STACK_PTR;
-      }else if(strcmp(word, "ACC") == 0){
-        constant_type_buffer[const_index] = ACC;
-      }else{
+      bool is_constant = false;
+
+#define X(name) \
+      if(strcmp(word, #name) == 0){\
+        constant_type_buffer[const_index] = name;\
+        const_index += 1;\
+        is_constant = true;\
+      }
+
+      CONSTANT_TYPE_LIST;
+
+#undef X
+
+      if(!is_constant){
         ILLEGAL_INST(i+1, "unable to identify constant\n"); 
         exit(8);
       }
