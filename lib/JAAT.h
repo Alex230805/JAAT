@@ -56,7 +56,7 @@
 #define STACK_LENGHT 1024
 #define BYTE_LENGHT u16t
 #define WORD_LEN 512
-#define DEBUG true 
+#define DEBUG false
 #define NAME_SPACE_LENGHT 256
 #define MACHINE_STATE false
 
