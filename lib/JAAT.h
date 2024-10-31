@@ -247,7 +247,7 @@ typedef enum{
 //  Constant type: where the constant are defined
 //
 
-#define X(name) name,
+#define X(name)name,
 
 typedef enum{
   CONSTANT_TYPE_LIST
@@ -579,7 +579,7 @@ void parse_instruction(){
       not_found = false;\
     }
 
-    LIST_OF_INSTRUCTION();
+    LIST_OF_INSTRUCTION()
 
 #undef X
 
@@ -608,7 +608,7 @@ void parse_instruction(){
           type = name##ext;\
           break;
     
-        LIST_OF_INSTRUCTION_A_PRS();
+        LIST_OF_INSTRUCTION_A_PRS(_ADR)
 #undef X
 
         default:
@@ -626,7 +626,7 @@ void parse_instruction(){
           type = name##ext;\
           break;
         
-        LIST_OF_INSTRUCTION_S_PRS(_STRING);
+        LIST_OF_INSTRUCTION_S_PRS(_STRING)
 
 #undef X
 
@@ -647,7 +647,7 @@ void parse_instruction(){
           type = name##ext;\
           break;
 
-      LIST_OF_INSTRUCTION_C_PRS(_CONSTANT);
+      LIST_OF_INSTRUCTION_C_PRS(_CONSTANT)
 
 #undef X
 
@@ -717,7 +717,7 @@ void parse_instruction(){
         is_constant = true;\
       }
 
-      CONSTANT_TYPE_LIST;
+      CONSTANT_TYPE_LIST
 
 #undef X
 
@@ -769,7 +769,7 @@ int parser_check_for_namespace(vm_inst inst, char* line){
 #define X(name)\
     case name:
 
-    LIST_OF_INSTRUCTION_NSP();
+    LIST_OF_INSTRUCTION_NSP()
 
 #undef X
       length = strlen(line);
@@ -841,14 +841,14 @@ void jaat_load(vm_inst instruction, int arg_0,int arg_1){
 #define X(name,ext)\
     case name##ext:
 
-    LIST_OF_INSTRUCTION_S_PRS(_STRING);
+    LIST_OF_INSTRUCTION_S_PRS(_STRING)
       if(string_buffer[JAAT.string_tracker] != NULL){
         JAAT.string_ptr = string_buffer[JAAT.string_tracker];
         JAAT.string_tracker += 1;
       }
       break;
 
-    LIST_OF_INSTRUCTION_C_PRS(_CONSTANT);
+    LIST_OF_INSTRUCTION_C_PRS(_CONSTANT)
       if(constant_type_buffer[JAAT.const_tracker] != 0){
         JAAT.constant_type = constant_type_buffer[JAAT.const_tracker];  
         JAAT.const_tracker += 1;
@@ -934,7 +934,7 @@ void jaat_debug(int inst_type, int pc){
         printf("[LOOP]: current programm counter: %d\n",pc);
         printf("[LOOP]: current instruction loaded: ");
         switch(inst_type){
-          LIST_OF_INSTRUCTION();
+          LIST_OF_INSTRUCTION()
         }
 }
 
