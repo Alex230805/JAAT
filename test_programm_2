@@ -2,10 +2,10 @@
 PUT(0)  // put 0 in the stack
 PUT(0)  // put 0 in the stack
 PRT('Test programm, for loop with 20 iteration and subroutine\n')
-JSR(SUBR)   // first one
+JSR(SUBR)   // first routine
 PRT('Second one\n')
-JSR(SUBR2)
-HLT()   // end programm
+JSR(SUBR2)  // second routine 
+JMP(END_PROGRAMM) // end point routine 
 
 !SUBROUTINE
 
@@ -20,7 +20,7 @@ RTS()       // return from subroutine
 
 ADC#(1,0)   // add stack[0] with stack[1]
 PRT(1)      // print it out
-ADC(0,2)    // add accumulator with 1 and put it in stack[0]
+ADC(0,2)    // add accumulator with 2 and put it in stack[0]
 CMP(1, 20)  // compare stack[1] with 20
 JNZ(SUBR)      // if are not equal return to line 5
 RTS()       // return from subroutine
@@ -30,9 +30,13 @@ RTS()       // return from subroutine
 
 ADC#(1,0)   // add stack[0] with stack[1]
 PRT(1)      // print it out
-ADC(0,3)    // add accumulator with 1 and put it in stack[0]
-CMP(1, 49)  // compare stack[1] with 20
+ADC(0,3)    // add accumulator with 3 and put it in stack[0]
+CMP(1, 49)  // compare stack[1] with 49
 JNZ(SUBR2)      // if are not equal return to line 5
 RTS()       // return from subroutine
 
 
+
+!END_PROGRAMM
+
+HLT()   // end programm

@@ -56,7 +56,7 @@
 #define STACK_LENGHT 1024
 #define BYTE_LENGHT u16t
 #define WORD_LEN 512
-#define DEBUG false 
+#define DEBUG true 
 #define NAME_SPACE_LENGHT 256
 #define MACHINE_STATE false
 
@@ -558,7 +558,6 @@ void parse_instruction(){
   bool name_space_found = false;
   bool skip = false;
   bool fun_reference = false;
-  bool not_found = true;
 
   for(int i=0;i< prg->programm_lenght;i++){
     fun_reference = false;
@@ -568,7 +567,6 @@ void parse_instruction(){
     is_constant = false;
     arg_0 = 0;
     arg_1 = 0;
-    not_found = true;
     memcpy(inst,prg->inst_array[i], sizeof(char)*3);
     
     // check for instruction alignment
@@ -576,14 +574,16 @@ void parse_instruction(){
 #define X(name) \
     if(strcmp(inst, #name) == 0){\
       type = name;\
-      not_found = false;\
-    }
+      printf("!! Found: "#name" \n");\
+    }else 
 
     LIST_OF_INSTRUCTION()
 
 #undef X
 
-   if(not_found){
+    if(inst[0] == '!'){
+      skip = true;
+    }else{
       fprintf(stderr, "[PARSER]: ERROR: no such instruction to parse, failed on line %d\n", i+1);
       exit(3);
     }
