@@ -574,7 +574,6 @@ void parse_instruction(){
 #define X(name) \
     if(strcmp(inst, #name) == 0){\
       type = name;\
-      printf("!! Found: "#name" \n");\
     }else 
 
     LIST_OF_INSTRUCTION()
