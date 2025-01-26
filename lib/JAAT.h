@@ -57,9 +57,11 @@
 #define BYTE_LENGHT u16t
 #define WORD_LEN 512
 #define DEBUG false
+#define EX_DEBUG false
+
 #define NAME_SPACE_LENGHT 256
 #define MACHINE_STATE false
-
+#define EX_ADR_LENGTH 256
 
 /*
 
@@ -110,7 +112,8 @@ JAAT INSTRUCTION DECLARATION BY USING
 #define LIST_OF_INSTRUCTION_A_PRS(ext) \
   X(ADC,ext)\
   X(SBC,ext)\
-  X(CMP,ext)
+  X(CMP,ext)\
+  X(PAR, ext)\
 
 /* instruction that support NAME_SPACE usage ( usually jump instruction and variation ) */
 
@@ -140,6 +143,7 @@ JAAT INSTRUCTION DECLARATION BY USING
   X(INC)\
   X(DEC)\
   X(SCN)\
+  X(PAR)\
   LIST_OF_INSTRUCTION_NSP()\
 
 
@@ -276,7 +280,11 @@ typedef struct{
   
   int stack_address_pointer;
   vm_constant_type constant_type;
-  
+
+  int ex_adr_ptr;
+  STACK_TYPES ex_adr[EX_ADR_LENGTH];
+  bool ex_adr_w_sgn[EX_ADR_LENGTH];
+
   int arg_0;
   int arg_1;
   bool negative;
@@ -373,7 +381,7 @@ void jaat_inc_constant(void);
 void jaat_dec_constant(void);
 void jaat_dec(int arg_0);
 void jaat_scn(void);
-
+void jaat_put_adr(int arg_0, int arg_1, bool address_op);
 
 /*
 
@@ -417,9 +425,7 @@ JAAT TAGS DEFINITION
 #define PRT_STRING(arg_0)       jaat_prt_string(arg_0); // prt_string:   string variation of prt
 #define SCN()                   jaat_scn();             // scn function: scan for keyboard input
 #define PRT_CONSTANT()          jaat_prt_constant();    // prt constant: print a constant reference
-
-
-
+#define PAR(arg_0,arg_1, flag)        jaat_put_adr(arg_0,arg_1, flag);  // put_adr: put arg_1 into arg_0 location on the extension address bus
 /*
 
 =======================================
@@ -487,6 +493,7 @@ void jaat_load_programm(Array *new_prg){
   JAAT.const_tracker = 0;
   JAAT.input_tracker_read = 0;
   JAAT.input_tracker_write = 0;
+  JAAT.ex_adr_ptr = 0;
 
   /* call the parser for loading the instruction */
   parse_preprocessor();
@@ -518,6 +525,10 @@ void parse_preprocessor(){
       if(DEBUG) printf("[PARSER PREPROCESSOR]: name space parser triggered\n");
       // save name_space
       fn_index = i-fn_name_space_ptr;
+      char* space = strchr(prg->inst_array[i],' ');
+      if(space != NULL){
+        prg->inst_array[i][(int)(space-prg->inst_array[i])] = '\0';
+      }
       fn_name_space[fn_name_space_ptr] = (Box){fn_index, prg->inst_array[i]};
       if(DEBUG) printf("[PARSER PREPROCESSOR]: name space found at %d: %s\n", i,fn_name_space[fn_name_space_ptr].name_space);
       fn_name_space_ptr+=1;
@@ -815,6 +826,13 @@ void jaat_start(int size){
   if(DEBUG) printf("[STARTER]: input buffer allocated\n");
   fn_name_space = (Box*)malloc(sizeof(Box)*pool_size);
   if(DEBUG) printf("[STARTER]: fn_name_space buffer allocated\n");
+  
+  for(int i=0;i<EX_ADR_LENGTH; i++){
+    JAAT.ex_adr_w_sgn[i] = false;
+  }
+
+  if(EX_DEBUG) printf("[STARTER]: all location for ex_adr_w_sgn cleared to false\n");
+
 }
 
 
@@ -885,20 +903,36 @@ void jaat_loop(){
     if(JAAT.current_pointer <= STACK_LENGHT){
       
       BYTE_LENGHT inst = instruction_pool[JAAT.programm_counter];
+
       if(DEBUG){
         jaat_debug(inst, JAAT.programm_counter);
-      } 
+      }
+      if(EX_DEBUG){
+        printf("[EXTENDED ADDRESS BUS]: content for each location:\n");
+        for(int i=0; i < EX_ADR_LENGTH;i++){
+          printf("- [%d]: %d\n", i, JAAT.ex_adr[i]);
+        }
+        printf("\n");
+      }
+
       int arg_0 = (int) instruction_pool[JAAT.programm_counter+1]; 
       int arg_1 = (int) instruction_pool[JAAT.programm_counter+2];
       jaat_load(inst,arg_0, arg_1);
       jaat_exec();
-      if(DEBUG){
+      // insert here the function related to the extension address bus junction
+      
+      JAAT.ex_adr_w_sgn[JAAT.ex_adr_ptr] = false;
+      JAAT.ex_adr_ptr = 0;
+
+
+      if(DEBUG || EX_DEBUG){
         scanf("%c", &input);
       } 
       JAAT.programm_counter += 3;
       if(JAAT.programm_counter > prg->programm_lenght*3){
         JAAT.programm_counter = 0;
       }
+
       if(DEBUG) printf("\n\n");
     } else {
       fprintf(stderr, "Stack overflow\n");
@@ -1044,6 +1078,12 @@ void jaat_exec(){
         break;
     case PUT_CONSTANT:
         PUT_CONSTANT();
+        break;
+    case PAR:
+        PAR(JAAT.arg_0, JAAT.arg_1, false);
+        break;
+    case PAR_ADR:
+        PAR(JAAT.arg_0, JAAT.arg_1, true); 
         break;
     default:
       NO_IMPLEMENTATION();
@@ -1474,6 +1514,48 @@ void jaat_prt_string(char*str){
   if(DEBUG) printf("\n");
   free(JAAT.string_ptr);
   JAAT.string_ptr = NULL;
+}
+
+/*
+
+=======================================
+
+JAAT EXTENSION ADDRESS BUS INSTRUCTIONS
+
+======================================
+
+*/ 
+
+void jaat_put_adr(int arg_0, int arg_1, bool address_op){
+
+  if(!address_op){
+    if(DEBUG) printf("\n -> put %d into %d ex address bus location\n", arg_1, arg_0);
+    if(arg_0 > 255) arg_0 = 0;
+    if(arg_0 < 0) arg_0 = 255;
+    JAAT.ex_adr[arg_0] = arg_1;
+    JAAT.ex_adr_w_sgn[arg_0] = true;
+    JAAT.ex_adr_ptr = arg_0;
+  }else{
+    if(arg_0 > STACK_LENGHT) arg_0 = 0;
+    if(arg_0 < 0) arg_0 = STACK_LENGHT;
+    if(arg_1 > STACK_LENGHT) arg_1 = 0;
+    if(arg_1 < 0) arg_1 = STACK_LENGHT;
+    int d0, d1;
+    
+    d0 = JAAT.stack[arg_0];
+    d1 = JAAT.stack[arg_1];
+
+    if(d0 > EX_ADR_LENGTH) d0 = 0;
+    if(d0 < 0) d0 = EX_ADR_LENGTH;
+    
+    if(DEBUG) printf("\n -> put %d into %d ex address bus location\n", d1, d0);
+
+    JAAT.ex_adr[d0] = d1;
+    JAAT.ex_adr_w_sgn[d0] = true;
+    JAAT.ex_adr_ptr = d0;
+  }
+
+  return;
 }
 
 
