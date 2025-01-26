@@ -1,0 +1,38 @@
+!START
+
+PRT("Testing the extension address bus\n")
+
+JSR(TEST_1)           // test routine 1
+PRT("ROUTINE 1 OK\n")
+JSR(TEST_2)           // test routine 2
+PRT("ROUTINE 2 OK\n")
+JMP(END_PRG)          // end program
+
+
+!TEST_1               // test routine 1 with simple direct operations
+PAR(0, 69)            // test direct interaction routine: ex_adr[n] = 69 
+PAR(1, 69)
+PAR(2, 69)
+PAR(3, 69)
+PAR(4, 69)
+PAR(5, 69)
+RTS()
+
+!TEST_2               // routine 2 with a for loop and with pointers
+PUT(0)                // put 0 into stack location 0
+PUT(69)               // put 69 into stack location 1
+
+!TEST_2_LOOP
+PAR#(0, 1)            // put data from stack[1] into address extension bus pointer in stack[0] 
+GET(0)                // get stack[0] and store it into accumulator
+ADC(0, 1)             // add 1 to accumulator and store it into stack[0]
+CMP(0, 255)           // check if stack[0] is eqal to 255 ( max ex_adr size )
+JEQ(TEST_2_END_LOOP)  // if so then exit from the loop
+JMP(TEST_2_LOOP)      // else continue 
+
+!TEST_2_END_LOOP
+RTS()                 // return back to START branch  
+
+!END_PRG              // end routine
+PRT("exit\n")
+HLT()                 // end programm and halt the machine
