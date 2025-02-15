@@ -62,6 +62,11 @@
 #define NAME_SPACE_LENGHT 256
 #define MACHINE_STATE false
 #define EX_ADR_LENGTH 256
+#define DEVICE_EXT
+#define TODO(string) \
+  printf("TODO: "string"\n");
+
+#define DEVICE_EXT
 
 /*
 
@@ -281,9 +286,9 @@ typedef struct{
   int stack_address_pointer;
   vm_constant_type constant_type;
 
-  int ex_adr_ptr;
-  STACK_TYPES ex_adr[EX_ADR_LENGTH];
-  bool ex_adr_w_sgn[EX_ADR_LENGTH];
+  int ex_adr_ptr;                   // address of the selected device
+  STACK_TYPES ex_adr[EX_ADR_LENGTH]; // array of function accessible by the extension address bus
+  bool ex_adr_w_sgn[EX_ADR_LENGTH]; // write signal from the device to analize what device is called 
 
   int arg_0;
   int arg_1;
@@ -314,6 +319,24 @@ typedef struct{
 }Box;
 
 
+// 
+//  Extension device call conv 
+//
+//
+
+//
+//  Device Call
+//
+
+
+#ifdef DEVICE_EXT
+
+  #define DEVICES_IMP
+  #include "devices.h" 
+  
+#endif 
+
+
 /*
 
 =======================================
@@ -336,6 +359,7 @@ void parse_instruction(void);
 int parser_check_for_namespace(vm_inst inst, char* line);
 void parse_preprocessor();
 void jaat_debug(int inst_type, int pc);
+void load_extension_bus(dev* d, int n_dev);
 
 
 
@@ -495,13 +519,31 @@ void jaat_load_programm(Array *new_prg){
   JAAT.input_tracker_write = 0;
   JAAT.ex_adr_ptr = 0;
 
+
   /* call the parser for loading the instruction */
+  load_extension_bus(devices, devices_length);
   parse_preprocessor();
   parse_instruction();
 }
 
 
 
+
+/*
+
+=======================================
+
+JAAT EXTENSION DEVICES LOADER
+
+======================================
+
+*/ 
+
+
+
+void load_extension_bus(dev* d, int n_dev){
+  TODO("Implement loading procedure of the extension bus devices");
+}
 
 
 /*
