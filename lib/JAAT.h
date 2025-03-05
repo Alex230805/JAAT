@@ -58,15 +58,15 @@
 #define WORD_LEN 512
 #define DEBUG false
 #define EX_DEBUG false
+#define J_VER "1.0"
+
 
 #define NAME_SPACE_LENGHT 256
 #define MACHINE_STATE false
 #define EX_ADR_LENGTH 256
-#define DEVICE_EXT
 #define TODO(string) \
   printf("TODO: "string"\n");
 
-#define DEVICE_EXT
 
 /*
 
@@ -318,23 +318,41 @@ typedef struct{
   char* name_space;
 }Box;
 
+// device args
 
-// 
-//  Extension device call conv 
-//
-//
+typedef struct{
+  int arg_0;
+  int arg_1;
+  int arg_2;
+  char* str;
+}ex_d_int;
 
-//
-//  Device Call
-//
+// device's function call
+
+typedef void (*call)(ex_d_int* data);
+
+// call reference
+
+typedef struct{
+  call c0;  // function call reference
+  int pos;  // device enumeration
+}call_ref;
 
 
-#ifdef DEVICE_EXT
+// device reference
 
-  #define DEVICES_IMP
-  #include "devices.h" 
-  
-#endif 
+typedef struct{
+  char* name;      // dev name
+  call_ref* calls; // array of ports for device 
+  int calls_length; // array length
+}dev;
+
+
+static dev* devices = NULL;       // array of devices
+static int devices_length = 0;    // array of devices length 
+
+
+
 
 
 /*
@@ -360,7 +378,6 @@ int parser_check_for_namespace(vm_inst inst, char* line);
 void parse_preprocessor();
 void jaat_debug(int inst_type, int pc);
 void load_extension_bus(dev* d, int n_dev);
-
 
 
 /*
