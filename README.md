@@ -14,8 +14,11 @@ The only difference with the backend at the preprocessing level is the lack of c
 If you are using the JAAT executable those are the possible options:
 
 -h : print help
+
 -l : print list of instruction
+
 -ex [n] : execute some example programm
+
 -n [file] : load external programm
 
 
